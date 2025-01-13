@@ -17,6 +17,8 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 		c.Header("Access-Control-Allow-Origin", "*") // Change "*" to specific origin in production
 	})
 
+	r.Static("/images", "./uploads")
+
 	r.GET("/menu", func(c *gin.Context) {
 		menu.GetMenu(c, client)
 	})
