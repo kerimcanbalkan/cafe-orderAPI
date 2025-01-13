@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/kerimcanbalkan/cafe-orderAPI/config"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/db"
@@ -18,12 +19,12 @@ import (
 var validate = validator.New()
 
 type MenuItem struct {
-	ID          string  `bson:"_id,omitempty" json:"id"`
-	Name        string  `bson:"name"          json:"name"        validate:"required"`
-	Description string  `bson:"description"   json:"description" validate:"required"`
-	Price       float32 `bson:"price"         json:"price"       validate:"required"`
-	Category    string  `bson:"category"      json:"category"    validate:"required"`
-	Img         string  `bson:"image"         json:"image"       validate:"required"`
+	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	Name        string             `bson:"name"          json:"name"        validate:"required"`
+	Description string             `bson:"description"   json:"description" validate:"required"`
+	Price       float32            `bson:"price"         json:"price"       validate:"required"`
+	Category    string             `bson:"category"      json:"category"    validate:"required"`
+	Img         string             `bson:"image"         json:"image"       validate:"required"`
 }
 
 func GetMenu(c *gin.Context, client *db.MongoClient) {
@@ -132,6 +133,14 @@ func DeleteMenuItem(c *gin.Context, client *db.MongoClient) {
 		return
 	}
 
+	docID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid ID!",
+		})
+		return
+	}
+
 	// Get collection from db
 	collection := client.GetCollection(config.Env.DatabaseName, "menu")
 
@@ -140,7 +149,7 @@ func DeleteMenuItem(c *gin.Context, client *db.MongoClient) {
 
 	// Retrieve the menu item to get the image path
 	var menuItem MenuItem
-	err := collection.FindOne(ctx, bson.M{"_id": id}).Decode(&menuItem)
+	err = collection.FindOne(ctx, bson.M{"_id": docID}).Decode(&menuItem)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Menu item not found",
@@ -150,17 +159,17 @@ func DeleteMenuItem(c *gin.Context, client *db.MongoClient) {
 
 	// Delete the image from the /uploads directory
 	if menuItem.Img != "" {
-		err = os.Remove("./uploads/" + menuItem.Img)
+		err = os.Remove(menuItem.Img)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Could not delete image file",
+				"error": "Could not remove related files",
 			})
 			return
 		}
 	}
 
 	// Now delete the menu item from the database
-	_, err = collection.DeleteOne(ctx, bson.M{"_id": id})
+	_, err = collection.DeleteOne(ctx, bson.M{"_id": docID})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Could not delete item",
@@ -168,7 +177,5 @@ func DeleteMenuItem(c *gin.Context, client *db.MongoClient) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Menu item deleted successfully",
-	})
+	c.JSON(http.StatusOK, nil)
 }

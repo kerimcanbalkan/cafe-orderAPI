@@ -24,6 +24,6 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 		menu.CreateMenuItem(c, client)
 	})
 	r.DELETE("/menu/:id", func(c *gin.Context) {
-		menu.CreateMenuItem(c, client)
+		menu.DeleteMenuItem(c, client)
 	})
 }
