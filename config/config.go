@@ -5,6 +5,8 @@ import (
 	"os"
 )
 
+var Env = LoadConfig()
+
 type Config struct {
 	DatabaseURI  string
 	DatabaseName string

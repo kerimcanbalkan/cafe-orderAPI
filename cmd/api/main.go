@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/kerimcanbalkan/cafe-orderAPI/config"
@@ -9,12 +11,25 @@ import (
 )
 
 func main() {
-	c := config.LoadConfig()
+	// Initialize MongoDB client
+	client, err := db.NewClient(config.Env.DatabaseURI)
+	if err != nil {
+		log.Fatalf("Error initializing MongoDB client %v", err)
+	}
 
-	db.ConnectMongoDB(c.DatabaseURI)
-
+	// Setup gin router
 	r := gin.Default()
-	routes.SetupRoutes(r)
 
-	r.Run(":" + c.ServerPort)
+	// Setup routes
+	routes.SetupRoutes(r, client)
+
+	// Start the server
+	r.Run(":" + config.Env.ServerPort)
+
+	// Disconnect after server shutdown
+	defer func() {
+		if err := client.Disconnect(); err != nil {
+			log.Fatalf("Error disconnecting from MongoDB: %v", err)
+		}
+	}()
 }
