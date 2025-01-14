@@ -17,15 +17,15 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 		c.Header("Access-Control-Allow-Origin", "*") // Change "*" to specific origin in production
 	})
 
-	r.Static("/images", "./uploads")
+	r.Static("api/v1/images", "./uploads")
 
-	r.GET("/menu", func(c *gin.Context) {
+	r.GET("api/v1/menu", func(c *gin.Context) {
 		menu.GetMenu(c, client)
 	})
-	r.POST("/menu", func(c *gin.Context) {
+	r.POST("api/v1/menu", func(c *gin.Context) {
 		menu.CreateMenuItem(c, client)
 	})
-	r.DELETE("/menu/:id", func(c *gin.Context) {
+	r.DELETE("api/v1/menu/:id", func(c *gin.Context) {
 		menu.DeleteMenuItem(c, client)
 	})
 }
