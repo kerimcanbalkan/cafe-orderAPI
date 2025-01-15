@@ -179,3 +179,41 @@ func DeleteMenuItem(c *gin.Context, client *db.MongoClient) {
 
 	c.JSON(http.StatusOK, nil)
 }
+
+func GetMenuByID(c *gin.Context, client *db.MongoClient) {
+	id := c.Param("id")
+	if id == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid ID!",
+		})
+		return
+	}
+
+	docID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid ID!",
+		})
+		return
+	}
+
+	// Get collection from db
+	collection := client.GetCollection(config.Env.DatabaseName, "menu")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	// Retrieve the menu item
+	var menuItem MenuItem
+	err = collection.FindOne(ctx, bson.M{"_id": docID}).Decode(&menuItem)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Menu item not found",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"item": menuItem,
+	})
+}

@@ -28,4 +28,7 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 	r.DELETE("api/v1/menu/:id", func(c *gin.Context) {
 		menu.DeleteMenuItem(c, client)
 	})
+	r.GET("api/v1/menu/:id", func(c *gin.Context) {
+		menu.GetMenuByID(c, client)
+	})
 }
