@@ -11,6 +11,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/kerimcanbalkan/cafe-orderAPI/config"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/db"
@@ -20,11 +21,11 @@ var validate = validator.New()
 
 type MenuItem struct {
 	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	Name        string             `bson:"name"          json:"name"        validate:"required"`
-	Description string             `bson:"description"   json:"description" validate:"required"`
-	Price       float32            `bson:"price"         json:"price"       validate:"required"`
-	Category    string             `bson:"category"      json:"category"    validate:"required"`
-	Img         string             `bson:"image"         json:"image"       validate:"required"`
+	Name        string             `bson:"name"          json:"name"        validate:"required,min=2,max=100"`
+	Description string             `bson:"description"   json:"description" validate:"required,min=5,max=500"`
+	Price       float32            `bson:"price"         json:"price"       validate:"required,gt=0,number"`
+	Category    string             `bson:"category"      json:"category"    validate:"required,min=2,max=100"`
+	Img         string             `bson:"image"         json:"image"       validate:"required,filepath"`
 }
 
 func GetMenu(c *gin.Context, client *db.MongoClient) {
@@ -39,18 +40,14 @@ func GetMenu(c *gin.Context, client *db.MongoClient) {
 	// Find all documents in the menu collection
 	cursor, err := collection.Find(ctx, bson.M{})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Could not fetch the menu",
-		})
+		handleMongoError(c, err)
 		return
 	}
 	defer cursor.Close(ctx)
 
 	// Decode the results into the menu slice
 	if err := cursor.All(ctx, &menu); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Could not find any menus",
-		})
+		handleMongoError(c, err)
 		return
 	}
 
@@ -118,7 +115,7 @@ func CreateMenuItem(c *gin.Context, client *db.MongoClient) {
 	}
 
 	// Validate the struct
-	if err = validate.Struct(item); err != nil {
+	if err = validateMenu(validate, item); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -132,7 +129,7 @@ func CreateMenuItem(c *gin.Context, client *db.MongoClient) {
 	// Insert the item into the database
 	result, err := collection.InsertOne(ctx, item)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not add the item"})
+		handleMongoError(c, err)
 		return
 	}
 
@@ -169,9 +166,7 @@ func DeleteMenuItem(c *gin.Context, client *db.MongoClient) {
 	var menuItem MenuItem
 	err = collection.FindOne(ctx, bson.M{"_id": docID}).Decode(&menuItem)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Menu item not found",
-		})
+		handleMongoError(c, err)
 		return
 	}
 
@@ -192,9 +187,7 @@ func DeleteMenuItem(c *gin.Context, client *db.MongoClient) {
 	// Now delete the menu item from the database
 	_, err = collection.DeleteOne(ctx, bson.M{"_id": docID})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Could not delete item",
-		})
+		handleMongoError(c, err)
 		return
 	}
 
@@ -228,9 +221,7 @@ func GetMenuByID(c *gin.Context, client *db.MongoClient) {
 	var menuItem MenuItem
 	err = collection.FindOne(ctx, bson.M{"_id": docID}).Decode(&menuItem)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Menu item not found",
-		})
+		handleMongoError(c, err)
 		return
 	}
 
