@@ -1,11 +1,9 @@
 package menu
 
 import (
-	"context"
 	"net/http"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -33,9 +31,8 @@ func GetMenu(c *gin.Context, client *db.MongoClient) {
 	// Get the collection from the database
 	collection := client.GetCollection(config.Env.DatabaseName, "menu")
 
-	// Set a context with a timeout for the query
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
+	// Get context from the request
+	ctx := c.Request.Context()
 
 	// Find all documents in the menu collection
 	cursor, err := collection.Find(ctx, bson.M{})
@@ -108,10 +105,10 @@ func CreateMenuItem(c *gin.Context, client *db.MongoClient) {
 	// Get the collection
 	collection := client.GetCollection(config.Env.DatabaseName, "menu")
 
-	// Insert the item into the database
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	// Get context from the request
+	ctx := c.Request.Context()
 
+	// Insert the item into the database
 	result, err := collection.InsertOne(ctx, item)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not add the item"})
@@ -144,8 +141,8 @@ func DeleteMenuItem(c *gin.Context, client *db.MongoClient) {
 	// Get collection from db
 	collection := client.GetCollection(config.Env.DatabaseName, "menu")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
+	// Get context from the request
+	ctx := c.Request.Context()
 
 	// Retrieve the menu item to get the image path
 	var menuItem MenuItem
@@ -200,8 +197,8 @@ func GetMenuByID(c *gin.Context, client *db.MongoClient) {
 	// Get collection from db
 	collection := client.GetCollection(config.Env.DatabaseName, "menu")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
+	// Get context from the request
+	ctx := c.Request.Context()
 
 	// Retrieve the menu item
 	var menuItem MenuItem
