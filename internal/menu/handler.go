@@ -179,10 +179,13 @@ func DeleteMenuItem(c *gin.Context, client *db.MongoClient) {
 	if menuItem.Img != "" {
 		err = os.Remove(menuItem.Img)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Could not remove related files",
-			})
-			return
+			if !os.IsNotExist(err) {
+
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": "Could not remove related files",
+				})
+				return
+			}
 		}
 	}
 
