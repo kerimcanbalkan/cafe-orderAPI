@@ -1,8 +1,10 @@
 package menu
 
 import (
+	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -60,6 +62,7 @@ func GetMenu(c *gin.Context, client *db.MongoClient) {
 
 // CreateMenu creates
 func CreateMenuItem(c *gin.Context, client *db.MongoClient) {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 2<<20)
 	// Parse form data
 	name := c.PostForm("name")
 	description := c.PostForm("description")
@@ -69,7 +72,25 @@ func CreateMenuItem(c *gin.Context, client *db.MongoClient) {
 	// Handle the image upload
 	file, err := c.FormFile("image")
 	if err != nil {
+		fmt.Println(err.Error())
+		if err.Error() == "multipart: NextPart: http: request body too large" {
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{
+				"error": fmt.Sprintf("Max request body size is %v bytes\n", 2<<20),
+			})
+			return
+		}
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Image file is required"})
+		return
+	}
+
+	mimeType := file.Header.Get("Content-Type")
+
+	// Validate image mime-type is allowable
+	if valid := isAllowedImageType(mimeType); !valid {
+		c.JSON(
+			http.StatusBadRequest,
+			gin.H{"error": "Invalid File format, must be 'image/jpeg' or 'image/png'"},
+		)
 		return
 	}
 
@@ -216,7 +237,13 @@ func GetMenuByID(c *gin.Context, client *db.MongoClient) {
 }
 
 func GetMenuItemImage(c *gin.Context) {
-	filename := c.Param("filename")
+	filename := filepath.Base(c.Param("filename"))
+	filePath := "./uploads/" + filename
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Image not found",
+		})
+	}
 	c.Header("Content-Type", "image/jpeg")
 	c.File("./uploads/" + filename)
 }
