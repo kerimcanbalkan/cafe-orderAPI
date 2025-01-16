@@ -1,16 +1,17 @@
 package menu
 
 import (
-	"context"
+	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/kerimcanbalkan/cafe-orderAPI/config"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/db"
@@ -20,11 +21,11 @@ var validate = validator.New()
 
 type MenuItem struct {
 	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	Name        string             `bson:"name"          json:"name"        validate:"required"`
-	Description string             `bson:"description"   json:"description" validate:"required"`
-	Price       float32            `bson:"price"         json:"price"       validate:"required"`
-	Category    string             `bson:"category"      json:"category"    validate:"required"`
-	Img         string             `bson:"image"         json:"image"       validate:"required"`
+	Name        string             `bson:"name"          json:"name"        validate:"required,min=2,max=100"`
+	Description string             `bson:"description"   json:"description" validate:"required,min=5,max=500"`
+	Price       float32            `bson:"price"         json:"price"       validate:"required,gt=0,number"`
+	Category    string             `bson:"category"      json:"category"    validate:"required,min=2,max=100"`
+	Img         string             `bson:"image"         json:"image"       validate:"required,filepath"`
 }
 
 func GetMenu(c *gin.Context, client *db.MongoClient) {
@@ -33,25 +34,20 @@ func GetMenu(c *gin.Context, client *db.MongoClient) {
 	// Get the collection from the database
 	collection := client.GetCollection(config.Env.DatabaseName, "menu")
 
-	// Set a context with a timeout for the query
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
+	// Get context from the request
+	ctx := c.Request.Context()
 
 	// Find all documents in the menu collection
 	cursor, err := collection.Find(ctx, bson.M{})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Could not fetch the menu",
-		})
+		handleMongoError(c, err)
 		return
 	}
 	defer cursor.Close(ctx)
 
 	// Decode the results into the menu slice
 	if err := cursor.All(ctx, &menu); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Could not find any menus",
-		})
+		handleMongoError(c, err)
 		return
 	}
 
@@ -63,6 +59,7 @@ func GetMenu(c *gin.Context, client *db.MongoClient) {
 
 // CreateMenu creates
 func CreateMenuItem(c *gin.Context, client *db.MongoClient) {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 2<<20)
 	// Parse form data
 	name := c.PostForm("name")
 	description := c.PostForm("description")
@@ -72,7 +69,25 @@ func CreateMenuItem(c *gin.Context, client *db.MongoClient) {
 	// Handle the image upload
 	file, err := c.FormFile("image")
 	if err != nil {
+		fmt.Println(err.Error())
+		if err.Error() == "multipart: NextPart: http: request body too large" {
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{
+				"error": fmt.Sprintf("Max request body size is %v bytes\n", 2<<20),
+			})
+			return
+		}
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Image file is required"})
+		return
+	}
+
+	mimeType := file.Header.Get("Content-Type")
+
+	// Validate image mime-type is allowable
+	if valid := isAllowedImageType(mimeType); !valid {
+		c.JSON(
+			http.StatusBadRequest,
+			gin.H{"error": "Invalid File format, must be 'image/jpeg' or 'image/png'"},
+		)
 		return
 	}
 
@@ -100,7 +115,7 @@ func CreateMenuItem(c *gin.Context, client *db.MongoClient) {
 	}
 
 	// Validate the struct
-	if err = validate.Struct(item); err != nil {
+	if err = validateMenu(validate, item); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -108,13 +123,13 @@ func CreateMenuItem(c *gin.Context, client *db.MongoClient) {
 	// Get the collection
 	collection := client.GetCollection(config.Env.DatabaseName, "menu")
 
-	// Insert the item into the database
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	// Get context from the request
+	ctx := c.Request.Context()
 
+	// Insert the item into the database
 	result, err := collection.InsertOne(ctx, item)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not add the item"})
+		handleMongoError(c, err)
 		return
 	}
 
@@ -144,16 +159,14 @@ func DeleteMenuItem(c *gin.Context, client *db.MongoClient) {
 	// Get collection from db
 	collection := client.GetCollection(config.Env.DatabaseName, "menu")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
+	// Get context from the request
+	ctx := c.Request.Context()
 
 	// Retrieve the menu item to get the image path
 	var menuItem MenuItem
 	err = collection.FindOne(ctx, bson.M{"_id": docID}).Decode(&menuItem)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Menu item not found",
-		})
+		handleMongoError(c, err)
 		return
 	}
 
@@ -161,19 +174,20 @@ func DeleteMenuItem(c *gin.Context, client *db.MongoClient) {
 	if menuItem.Img != "" {
 		err = os.Remove(menuItem.Img)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Could not remove related files",
-			})
-			return
+			if !os.IsNotExist(err) {
+
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": "Could not remove related files",
+				})
+				return
+			}
 		}
 	}
 
 	// Now delete the menu item from the database
 	_, err = collection.DeleteOne(ctx, bson.M{"_id": docID})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Could not delete item",
-		})
+		handleMongoError(c, err)
 		return
 	}
 
@@ -200,16 +214,14 @@ func GetMenuByID(c *gin.Context, client *db.MongoClient) {
 	// Get collection from db
 	collection := client.GetCollection(config.Env.DatabaseName, "menu")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
+	// Get context from the request
+	ctx := c.Request.Context()
 
 	// Retrieve the menu item
 	var menuItem MenuItem
 	err = collection.FindOne(ctx, bson.M{"_id": docID}).Decode(&menuItem)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Menu item not found",
-		})
+		handleMongoError(c, err)
 		return
 	}
 
@@ -219,7 +231,13 @@ func GetMenuByID(c *gin.Context, client *db.MongoClient) {
 }
 
 func GetMenuItemImage(c *gin.Context) {
-	filename := c.Param("filename")
+	filename := filepath.Base(c.Param("filename"))
+	filePath := "./uploads/" + filename
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Image not found",
+		})
+	}
 	c.Header("Content-Type", "image/jpeg")
 	c.File("./uploads/" + filename)
 }
