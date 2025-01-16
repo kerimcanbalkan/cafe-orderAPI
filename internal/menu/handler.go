@@ -217,3 +217,9 @@ func GetMenuByID(c *gin.Context, client *db.MongoClient) {
 		"item": menuItem,
 	})
 }
+
+func GetMenuItemImage(c *gin.Context) {
+	filename := c.Param("filename")
+	c.Header("Content-Type", "image/jpeg")
+	c.File("./uploads/" + filename)
+}
