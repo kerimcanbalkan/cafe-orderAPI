@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/lithammer/shortuuid/v3"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -111,4 +112,8 @@ func handleMongoError(c *gin.Context, err error) {
 		http.StatusInternalServerError,
 		gin.H{"error": "An unexpected error occurred. Please try again later."},
 	)
+}
+
+func generateImageName() string {
+	return shortuuid.New()
 }
