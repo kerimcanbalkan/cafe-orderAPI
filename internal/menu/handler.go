@@ -2,6 +2,7 @@ package menu
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -91,7 +92,7 @@ func CreateMenuItem(c *gin.Context, client *db.MongoClient) {
 	}
 
 	// Save the image to the server
-	imagePath := "uploads/" + file.Filename
+	imagePath := "uploads/" + generateImageName()
 	if err = c.SaveUploadedFile(file, imagePath); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not save image"})
 		return
@@ -232,11 +233,28 @@ func GetMenuByID(c *gin.Context, client *db.MongoClient) {
 func GetMenuItemImage(c *gin.Context) {
 	filename := filepath.Base(c.Param("filename"))
 	filePath := "./uploads/" + filename
+	log.Println(os.Stat(filePath))
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Image not found",
 		})
 	}
-	c.Header("Content-Type", "image/jpeg")
+
+	// Determine content type
+	file, err := os.Open(filePath)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to open image"})
+		return
+	}
+	defer file.Close()
+
+	buffer := make([]byte, 512)
+	if _, err := file.Read(buffer); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to read image"})
+		return
+	}
+
+	contentType := http.DetectContentType(buffer)
+	c.Header("Content-Type", contentType)
 	c.File("./uploads/" + filename)
 }
