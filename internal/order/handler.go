@@ -101,3 +101,67 @@ func GetOrders(c *gin.Context, client *db.MongoClient) {
 		"orders": orders,
 	})
 }
+
+func ServeOrder(c *gin.Context, client *db.MongoClient) {
+	idParam := c.Param("id")
+	if idParam == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid ID!",
+		})
+		return
+	}
+
+	id, _ := primitive.ObjectIDFromHex(idParam)
+	filter := bson.D{{"_id", id}}
+
+	update := bson.D{{"$set", bson.D{{"served", true}}}}
+	// Get the collection from the database
+	collection := client.GetCollection(config.Env.DatabaseName, "orders")
+
+	// Get context from the request
+	ctx := c.Request.Context()
+
+	// Updates the first document that has the specified "_id" value
+	_, err := collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Serve status updated successfuly",
+	})
+}
+
+func CompleteOrder(c *gin.Context, client *db.MongoClient) {
+	idParam := c.Param("id")
+	if idParam == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid ID!",
+		})
+		return
+	}
+
+	id, _ := primitive.ObjectIDFromHex(idParam)
+	filter := bson.D{{"_id", id}}
+
+	update := bson.D{{"$set", bson.D{{"status", true}}}}
+	// Get the collection from the database
+	collection := client.GetCollection(config.Env.DatabaseName, "orders")
+
+	// Get context from the request
+	ctx := c.Request.Context()
+
+	// Updates the first document that has the specified "_id" value
+	_, err := collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Complete status updated successfuly",
+	})
+}

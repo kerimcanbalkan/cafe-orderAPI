@@ -44,4 +44,10 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 	r.GET("api/v1/order", func(c *gin.Context) {
 		order.GetOrders(c, client)
 	})
+	r.PATCH("api/v1/order/serve/:id", func(c *gin.Context) {
+		order.ServeOrder(c, client)
+	})
+	r.PATCH("api/v1/order/complete/:id", func(c *gin.Context) {
+		order.CompleteOrder(c, client)
+	})
 }
