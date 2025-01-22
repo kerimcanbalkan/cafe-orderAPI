@@ -5,6 +5,7 @@ import (
 
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/db"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/menu"
+	"github.com/kerimcanbalkan/cafe-orderAPI/internal/order"
 )
 
 func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
@@ -34,5 +35,19 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 	})
 	r.GET("api/v1/menu/:id", func(c *gin.Context) {
 		menu.GetMenuByID(c, client)
+	})
+
+	// Order routes
+	r.POST("api/v1/order", func(c *gin.Context) {
+		order.CreateOrder(c, client)
+	})
+	r.GET("api/v1/order", func(c *gin.Context) {
+		order.GetOrders(c, client)
+	})
+	r.PATCH("api/v1/order/serve/:id", func(c *gin.Context) {
+		order.ServeOrder(c, client)
+	})
+	r.PATCH("api/v1/order/complete/:id", func(c *gin.Context) {
+		order.CompleteOrder(c, client)
 	})
 }
