@@ -38,7 +38,7 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 	})
 
 	// Order routes
-	r.POST("api/v1/order", func(c *gin.Context) {
+	r.POST("api/v1/order/:table", func(c *gin.Context) {
 		order.CreateOrder(c, client)
 	})
 	r.GET("api/v1/order", func(c *gin.Context) {

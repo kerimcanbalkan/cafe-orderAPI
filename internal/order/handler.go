@@ -2,6 +2,7 @@ package order
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -15,17 +16,27 @@ import (
 )
 
 type Order struct {
-	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	Items     []menu.MenuItem    `bson:"items"         json:"items"     validate:"required"`
-	Status    bool               `bson:"status"        json:"status"`
-	Served    bool               `bson:"served"        json:"served"`
-	CreatedAt time.Time          `bson:"createdAt"     json:"createdAt"`
+	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	Items       []menu.MenuItem    `bson:"items"         json:"items"       validate:"required"`
+	TotalPrice  float32            `bson:"totalPrice"    json:"totalPrice"`
+	TableNumber int                `bson:"tableNumber"   json:"tableNumber"`
+	Status      bool               `bson:"status"        json:"status"`
+	Served      bool               `bson:"served"        json:"served"`
+	CreatedAt   time.Time          `bson:"createdAt"     json:"createdAt"`
 }
 
 var validate = validator.New()
 
 // CreateOrder creates an order and saves it in the database
 func CreateOrder(c *gin.Context, client *db.MongoClient) {
+	tableStr := c.Param("table")
+	table, err := strconv.Atoi(tableStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid table number",
+		})
+		return
+	}
 	var order Order
 
 	// Bind the request body to the order structure
@@ -44,9 +55,16 @@ func CreateOrder(c *gin.Context, client *db.MongoClient) {
 		return
 	}
 
+	order.TableNumber = table
 	order.Status = false
 	order.Served = false
 	order.CreatedAt = time.Now()
+
+	var totalPrice float32 = 0.0
+	for _, p := range order.Items {
+		totalPrice += p.Price
+	}
+	order.TotalPrice = totalPrice
 
 	// Get the collection
 	collection := client.GetCollection(config.Env.DatabaseName, "orders")
@@ -64,8 +82,8 @@ func CreateOrder(c *gin.Context, client *db.MongoClient) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Order created successfuly",
-		"item_id": result.InsertedID,
+		"message":  "Order created successfuly",
+		"order_id": result.InsertedID,
 	})
 }
 
