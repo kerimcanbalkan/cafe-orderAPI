@@ -74,15 +74,6 @@ func handleMongoError(c *gin.Context, err error) {
 		return
 	}
 
-	// Handle connection errors
-	if err == mongo.ErrNoDocuments {
-		c.JSON(
-			http.StatusInternalServerError,
-			gin.H{"error": "Database connection failed. Please try again later."},
-		)
-		return
-	}
-
 	// Handle timeout errors
 	if err.Error() == "context deadline exceeded" {
 		c.JSON(
