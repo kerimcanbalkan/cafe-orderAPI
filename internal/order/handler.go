@@ -39,19 +39,17 @@ func CreateOrder(c *gin.Context, client *db.MongoClient) {
 	}
 	var order Order
 
-	// Bind the request body to the order structure
-	if err := c.ShouldBindJSON(&order); err != nil {
+	// Bind the request body to the order struct
+	if err = c.ShouldBindJSON(&order); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid request body",
 		})
 		return
 	}
-	// Validate the order fields
-	if err := validate.Struct(&order); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Validation failed",
-			"details": err.Error(),
-		})
+
+	// Validate the struct
+	if err = validateOrder(validate, order); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -120,6 +118,7 @@ func GetOrders(c *gin.Context, client *db.MongoClient) {
 	})
 }
 
+// ServeOrder changes served status to true
 func ServeOrder(c *gin.Context, client *db.MongoClient) {
 	idParam := c.Param("id")
 	if idParam == "" {
@@ -130,9 +129,14 @@ func ServeOrder(c *gin.Context, client *db.MongoClient) {
 	}
 
 	id, _ := primitive.ObjectIDFromHex(idParam)
-	filter := bson.D{{"_id", id}}
+	filter := bson.D{{Key: "_id", Value: id}}
 
-	update := bson.D{{"$set", bson.D{{"served", true}}}}
+	update := bson.D{
+		{Key: "$set", Value: bson.D{
+			{Key: "served", Value: true},
+		}},
+	}
+
 	// Get the collection from the database
 	collection := client.GetCollection(config.Env.DatabaseName, "orders")
 
@@ -152,6 +156,7 @@ func ServeOrder(c *gin.Context, client *db.MongoClient) {
 	})
 }
 
+// CompleteOrder changes the status of order to true
 func CompleteOrder(c *gin.Context, client *db.MongoClient) {
 	idParam := c.Param("id")
 	if idParam == "" {
@@ -162,9 +167,14 @@ func CompleteOrder(c *gin.Context, client *db.MongoClient) {
 	}
 
 	id, _ := primitive.ObjectIDFromHex(idParam)
-	filter := bson.D{{"_id", id}}
+	filter := bson.D{{Key: "_id", Value: id}}
 
-	update := bson.D{{"$set", bson.D{{"status", true}}}}
+	update := bson.D{
+		{Key: "$set", Value: bson.D{
+			{Key: "status", Value: true},
+		}},
+	}
+
 	// Get the collection from the database
 	collection := client.GetCollection(config.Env.DatabaseName, "orders")
 
