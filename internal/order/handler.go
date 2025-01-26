@@ -1,6 +1,7 @@
 package order
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -191,5 +192,63 @@ func CompleteOrder(c *gin.Context, client *db.MongoClient) {
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Complete status updated successfuly",
+	})
+}
+
+// CompleteOrder changes the status of order to true
+func UpdateOrder(c *gin.Context, client *db.MongoClient) {
+	idParam := c.Param("id")
+	if idParam == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid ID!",
+		})
+		return
+	}
+
+	id, _ := primitive.ObjectIDFromHex(idParam)
+	filter := bson.D{{Key: "_id", Value: id}}
+
+	var orderItems []menu.MenuItem
+
+	// Bind the request body to the order struct
+	if err := c.ShouldBindJSON(&orderItems); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid request body",
+		})
+		return
+	}
+
+	// Validate Items
+	for _, item := range orderItems {
+		if err := menu.ValidateMenu(validate, item); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": fmt.Sprintf("Validation failed for item %s: %s", item.Name, err.Error()),
+			})
+			return
+		}
+	}
+
+	update := bson.D{
+		{Key: "$set", Value: bson.D{
+			{Key: "items", Value: orderItems},
+		}},
+	}
+
+	// Get the collection from the database
+	collection := client.GetCollection(config.Env.DatabaseName, "orders")
+
+	// Get context from the request
+	ctx := c.Request.Context()
+
+	// Updates the first document that has the specified "_id" value
+	_, err := collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Order updated succesfully",
 	})
 }

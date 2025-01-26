@@ -23,7 +23,7 @@ func isAllowedImageType(mimeType string) bool {
 	return exists
 }
 
-func validateMenu(v *validator.Validate, item MenuItem) error {
+func ValidateMenu(v *validator.Validate, item MenuItem) error {
 	// Perform validation
 	if err := v.Struct(item); err != nil {
 
