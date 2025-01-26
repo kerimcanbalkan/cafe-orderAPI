@@ -9,6 +9,7 @@ import (
 )
 
 func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
+	// Middleware to add headers globally
 	r.Use(func(c *gin.Context) {
 		c.Header("Content-Type", "application/json")
 		c.Header("Cache-Control", "public, max-age=3600")
@@ -17,15 +18,16 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 		c.Header("Access-Control-Allow-Origin", "*") // Change "*" to specific origin in production
 	})
 
+	// Serving Images
 	r.GET("api/v1/images/:filename", func(c *gin.Context) {
 		menu.GetMenuItemImage(c)
 	})
 
+	// Menu routes
 	r.GET("api/v1/menu", func(c *gin.Context) {
 		menu.GetMenu(c, client)
 	})
 
-	// Middleware to add headers globally
 	r.MaxMultipartMemory = 2 << 20
 	r.POST("api/v1/menu", func(c *gin.Context) {
 		menu.CreateMenuItem(c, client)
@@ -43,6 +45,9 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 	})
 	r.GET("api/v1/order", func(c *gin.Context) {
 		order.GetOrders(c, client)
+	})
+	r.PATCH("api/v1/order/:id", func(c *gin.Context) {
+		order.UpdateOrder(c, client)
 	})
 	r.PATCH("api/v1/order/serve/:id", func(c *gin.Context) {
 		order.ServeOrder(c, client)

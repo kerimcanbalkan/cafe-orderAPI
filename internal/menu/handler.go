@@ -115,7 +115,7 @@ func CreateMenuItem(c *gin.Context, client *db.MongoClient) {
 	}
 
 	// Validate the struct
-	if err = validateMenu(validate, item); err != nil {
+	if err = ValidateMenu(validate, item); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
