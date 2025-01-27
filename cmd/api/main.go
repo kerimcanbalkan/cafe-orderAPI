@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -8,6 +9,7 @@ import (
 	"github.com/kerimcanbalkan/cafe-orderAPI/config"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/db"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/routes"
+	"github.com/kerimcanbalkan/cafe-orderAPI/internal/user"
 )
 
 func main() {
@@ -16,6 +18,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error initializing MongoDB client %v", err)
 	}
+
+	// Create a root context for the application
+	rootCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	user.SeedAdminUser(client, rootCtx)
 
 	// Setup gin router
 	r := gin.Default()
