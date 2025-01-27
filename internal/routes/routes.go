@@ -22,35 +22,17 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 	r.GET("api/v1/images/:filename", menu.GetMenuItemImage)
 
 	// Menu routes
-	r.GET("api/v1/menu", func(c *gin.Context) {
-		menu.GetMenu(c, client)
-	})
+	r.GET("api/v1/menu", menu.GetMenu(client))
 
 	r.MaxMultipartMemory = 2 << 20
-	r.POST("api/v1/menu", func(c *gin.Context) {
-		menu.CreateMenuItem(c, client)
-	})
-	r.DELETE("api/v1/menu/:id", func(c *gin.Context) {
-		menu.DeleteMenuItem(c, client)
-	})
-	r.GET("api/v1/menu/:id", func(c *gin.Context) {
-		menu.GetMenuByID(c, client)
-	})
+	r.POST("api/v1/menu", menu.CreateMenuItem(client))
+	r.DELETE("api/v1/menu/:id", menu.DeleteMenuItem(client))
+	r.GET("api/v1/menu/:id", menu.GetMenuByID(client))
 
 	// Order routes
-	r.POST("api/v1/order/:table", func(c *gin.Context) {
-		order.CreateOrder(c, client)
-	})
-	r.GET("api/v1/order", func(c *gin.Context) {
-		order.GetOrders(c, client)
-	})
-	r.PATCH("api/v1/order/:id", func(c *gin.Context) {
-		order.UpdateOrder(c, client)
-	})
-	r.PATCH("api/v1/order/serve/:id", func(c *gin.Context) {
-		order.ServeOrder(c, client)
-	})
-	r.PATCH("api/v1/order/complete/:id", func(c *gin.Context) {
-		order.CompleteOrder(c, client)
-	})
+	r.POST("api/v1/order/:table", order.CreateOrder(client))
+	r.GET("api/v1/order", order.GetOrders(client))
+	r.PATCH("api/v1/order/:id", order.UpdateOrder(client))
+	r.PATCH("api/v1/order/serve/:id", order.ServeOrder(client))
+	r.PATCH("api/v1/order/complete/:id", order.CompleteOrder(client))
 }
