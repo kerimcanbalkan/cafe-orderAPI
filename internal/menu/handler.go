@@ -19,15 +19,6 @@ import (
 
 var validate = validator.New()
 
-type MenuItem struct {
-	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	Name        string             `bson:"name"          json:"name"        validate:"required,min=2,max=100"`
-	Description string             `bson:"description"   json:"description" validate:"required,min=5,max=500"`
-	Price       float32            `bson:"price"         json:"price"       validate:"required,gt=0,number"`
-	Category    string             `bson:"category"      json:"category"    validate:"required,min=2,max=100"`
-	Img         string             `bson:"image"         json:"image"       validate:"required,filepath"`
-}
-
 func GetMenu(c *gin.Context, client *db.MongoClient) {
 	var menu []MenuItem
 
