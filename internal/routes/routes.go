@@ -19,9 +19,7 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 	})
 
 	// Serving Images
-	r.GET("api/v1/images/:filename", func(c *gin.Context) {
-		menu.GetMenuItemImage(c)
-	})
+	r.GET("api/v1/images/:filename", menu.GetMenuItemImage)
 
 	// Menu routes
 	r.GET("api/v1/menu", func(c *gin.Context) {
