@@ -88,8 +88,79 @@ func GetOrders(client *db.MongoClient) gin.HandlerFunc {
 		// Get context from the request
 		ctx := c.Request.Context()
 
+		// Get query parameters
+		status := c.Query("status")
+		served := c.Query("served")
+		table := c.Query("table")
+		date := c.Query("date")
+
+		// Build MongoDB query dynamically
+		query := bson.D{}
+
+		// Parse "status" query parameter (convert to boolean)
+		if status != "" {
+			status, err := strconv.ParseBool(status)
+			if err != nil {
+				c.JSON(
+					http.StatusBadRequest,
+					gin.H{"error": "Invalid status value. Use true or false."},
+				)
+				return
+			}
+			query = append(query, bson.E{Key: "status", Value: status})
+		}
+
+		// Parse "served" query parameter
+		if served != "" {
+			served, err := strconv.ParseBool(served)
+			if err != nil {
+				c.JSON(
+					http.StatusBadRequest,
+					gin.H{"error": "Invalid status value. Use true or false."},
+				)
+				return
+			}
+			query = append(query, bson.E{Key: "served", Value: served})
+		}
+
+		// Add table filter
+		if table != "" {
+			table, err := strconv.Atoi(table)
+			if err != nil {
+				c.JSON(
+					http.StatusBadRequest,
+					gin.H{"error": "Invalid table number."},
+				)
+				return
+			}
+			query = append(query, bson.E{Key: "tableNumber", Value: table})
+		}
+
+		// Parse "date" query parameter
+		if date != "" {
+			parsedDate, err := time.Parse("2006-01-02", date)
+			if err != nil {
+				c.JSON(
+					http.StatusBadRequest,
+					gin.H{"error": "Invalid date format. Use YYYY-MM-DD."},
+				)
+				return
+			}
+
+			// Calculate start and end of the day
+			startOfDay := primitive.NewDateTimeFromTime(parsedDate)
+			endOfDay := primitive.NewDateTimeFromTime(parsedDate.Add(24 * time.Hour))
+			query = append(query, bson.E{
+				Key: "createdAt",
+				Value: bson.D{
+					{Key: "$gte", Value: startOfDay},
+					{Key: "$lt", Value: endOfDay},
+				},
+			})
+		}
+
 		// Find all documents in the menu collection
-		cursor, err := collection.Find(ctx, bson.M{})
+		cursor, err := collection.Find(ctx, query)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err,
