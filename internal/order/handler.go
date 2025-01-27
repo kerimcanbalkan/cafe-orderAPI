@@ -217,6 +217,8 @@ func UpdateOrder(client *db.MongoClient) gin.HandlerFunc {
 			return
 		}
 
+		totalPrice := float32(0)
+
 		// Validate Items
 		for _, item := range orderItems {
 			if err := menu.ValidateMenu(validate, item); err != nil {
@@ -229,11 +231,13 @@ func UpdateOrder(client *db.MongoClient) gin.HandlerFunc {
 				})
 				return
 			}
+			totalPrice += item.Price
 		}
 
 		update := bson.D{
 			{Key: "$set", Value: bson.D{
 				{Key: "items", Value: orderItems},
+				{Key: "totalPrice", Value: totalPrice},
 			}},
 		}
 
