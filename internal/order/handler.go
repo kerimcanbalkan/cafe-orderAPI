@@ -322,7 +322,7 @@ func UpdateOrder(client *db.MongoClient) gin.HandlerFunc {
 		_, err := collection.UpdateOne(ctx, filter, update)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err,
+				"error": err.Error(),
 			})
 			return
 		}
