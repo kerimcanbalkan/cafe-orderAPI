@@ -13,6 +13,7 @@ type Config struct {
 	ServerPort           string
 	DefaultAdminUsername string
 	DefaultAdminPassword string
+	Secret               string
 }
 
 func LoadConfig() *Config {
@@ -22,6 +23,7 @@ func LoadConfig() *Config {
 		ServerPort:           getEnv("SERVER_PORT", "8080"),
 		DefaultAdminUsername: getEnv("DEFAULT_ADMIN_USERNAME", "admin"),
 		DefaultAdminPassword: getEnv("DEFAULT_ADMIN_PASSWORD", "password"),
+		Secret:               getEnv("SECRET", "reallysecuresecret"),
 	}
 
 	// Log loaded configuration (excluding sensitive information in production)

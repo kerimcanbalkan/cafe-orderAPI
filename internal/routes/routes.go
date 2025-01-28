@@ -40,4 +40,5 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 	// User routes
 	r.POST("api/v1/user", user.CreateUser(client))
 	r.GET("api/v1/user", user.GetUsers(client))
+	r.POST("api/v1/user/login", user.Login(client))
 }
