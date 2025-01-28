@@ -8,6 +8,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/kerimcanbalkan/cafe-orderAPI/config"
@@ -163,5 +164,42 @@ func Login(client *db.MongoClient) gin.HandlerFunc {
 			"token":      token,
 			"expires_in": 30 * 24 * 60 * 60, // 30 days
 		})
+	}
+}
+
+func DeleteUser(client *db.MongoClient) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id := c.Param("id")
+		if id == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid ID!",
+			})
+			return
+		}
+
+		docID, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid ID!",
+			})
+			return
+		}
+
+		// Get collection from db
+		collection := client.GetCollection(config.Env.DatabaseName, "users")
+
+		// Get context from the request
+		ctx := c.Request.Context()
+
+		// Delete user from database
+		_, err = collection.DeleteOne(ctx, bson.M{"_id": docID})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Could not delete user",
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, nil)
 	}
 }

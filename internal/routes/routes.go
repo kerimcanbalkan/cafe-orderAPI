@@ -65,5 +65,6 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 		userGroup.POST("", auth.Authenticate([]string{"admin"}), user.CreateUser(client))
 		userGroup.GET("", auth.Authenticate([]string{"admin"}), user.GetUsers(client))
 		userGroup.POST("/login", user.Login(client))
+		userGroup.DELETE("/:id", auth.Authenticate([]string{"admin"}), user.DeleteUser(client))
 	}
 }
