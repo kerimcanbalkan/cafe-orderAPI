@@ -14,6 +14,6 @@ type User struct {
 	Email     string             `bson:"email"         json:"email"     validate:"required,email"`
 	Username  string             `bson:"username"      json:"username"  validate:"required,min=2,max=20"`
 	Password  string             `bson:"password"      json:"password"  validate:"required,min=8,max=20"`
-	Role      string             `bson:"role"          json:"role"      validate:"required,oneof=admin casier waiter"`
+	Role      string             `bson:"role"          json:"role"      validate:"required,oneof=admin cashier waiter"`
 	CreatedAt time.Time          `bson:"created_at"    json:"createdAt"`
 }
