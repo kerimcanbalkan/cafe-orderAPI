@@ -3,6 +3,7 @@ package routes
 import (
 	"github.com/gin-gonic/gin"
 
+	"github.com/kerimcanbalkan/cafe-orderAPI/internal/auth"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/db"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/menu"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/order"
@@ -22,23 +23,47 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 	// Serving Images
 	r.GET("api/v1/images/:filename", menu.GetMenuItemImage)
 
-	// Menu routes
-	r.GET("api/v1/menu", menu.GetMenu(client))
+	// Menu Routes
+	menuGroup := r.Group("/api/v1/menu")
+	{
+		menuGroup.GET("", menu.GetMenu(client))
+		menuGroup.POST("", auth.Authenticate([]string{"admin"}), menu.CreateMenuItem(client))
+		menuGroup.DELETE("/:id", auth.Authenticate([]string{"admin"}), menu.DeleteMenuItem(client))
+		menuGroup.GET("/:id", auth.Authenticate([]string{"admin"}), menu.GetMenuByID(client))
+		menuGroup.GET("/images/:filename", menu.GetMenuItemImage)
+	}
 
-	r.MaxMultipartMemory = 2 << 20
-	r.POST("api/v1/menu", menu.CreateMenuItem(client))
-	r.DELETE("api/v1/menu/:id", menu.DeleteMenuItem(client))
-	r.GET("api/v1/menu/:id", menu.GetMenuByID(client))
+	// Order Routes
+	orderGroup := r.Group("/api/v1/order")
+	{
+		orderGroup.POST("/:table", order.CreateOrder(client))
+		orderGroup.GET(
+			"",
+			auth.Authenticate([]string{"admin", "cashier", "waiter"}),
+			order.GetOrders(client),
+		)
+		orderGroup.PATCH(
+			"/:id",
+			auth.Authenticate([]string{"admin", "cashier", "waiter"}),
+			order.UpdateOrder(client),
+		)
+		orderGroup.PATCH(
+			"/serve/:id",
+			auth.Authenticate([]string{"admin", "waiter"}),
+			order.ServeOrder(client),
+		)
+		orderGroup.PATCH(
+			"/complete/:id",
+			auth.Authenticate([]string{"admin", "cashier"}),
+			order.CompleteOrder(client),
+		)
+	}
 
-	// Order routes
-	r.POST("api/v1/order/:table", order.CreateOrder(client))
-	r.GET("api/v1/order", order.GetOrders(client))
-	r.PATCH("api/v1/order/:id", order.UpdateOrder(client))
-	r.PATCH("api/v1/order/serve/:id", order.ServeOrder(client))
-	r.PATCH("api/v1/order/complete/:id", order.CompleteOrder(client))
-
-	// User routes
-	r.POST("api/v1/user", user.CreateUser(client))
-	r.GET("api/v1/user", user.GetUsers(client))
-	r.POST("api/v1/user/login", user.Login(client))
+	// User Routes
+	userGroup := r.Group("/api/v1/user")
+	{
+		userGroup.POST("", auth.Authenticate([]string{"admin"}), user.CreateUser(client))
+		userGroup.GET("", auth.Authenticate([]string{"admin"}), user.GetUsers(client))
+		userGroup.POST("/login", user.Login(client))
+	}
 }
