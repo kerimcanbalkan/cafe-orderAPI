@@ -8,10 +8,12 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/kerimcanbalkan/cafe-orderAPI/config"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/db"
+	"github.com/kerimcanbalkan/cafe-orderAPI/internal/utils"
 )
 
 var validate = validator.New()
@@ -54,9 +56,7 @@ func CreateUser(client *db.MongoClient) gin.HandlerFunc {
 		// Insert the item into the database
 		result, err := collection.InsertOne(ctx, user)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err.Error(),
-			})
+			utils.HandleMongoError(c, err)
 			return
 		}
 
@@ -80,9 +80,7 @@ func GetUsers(client *db.MongoClient) gin.HandlerFunc {
 		// Find all documents in the menu collection
 		cursor, err := collection.Find(ctx, bson.D{})
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err,
-			})
+			utils.HandleMongoError(c, err)
 			return
 		}
 		defer cursor.Close(ctx)
@@ -128,11 +126,8 @@ func Login(client *db.MongoClient) gin.HandlerFunc {
 
 		err := collection.FindOne(ctx, filter).Decode(&user)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "User not found",
-			})
+			utils.HandleMongoError(c, err)
 			return
-
 		}
 
 		err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password))
@@ -163,5 +158,40 @@ func Login(client *db.MongoClient) gin.HandlerFunc {
 			"token":      token,
 			"expires_in": 30 * 24 * 60 * 60, // 30 days
 		})
+	}
+}
+
+func DeleteUser(client *db.MongoClient) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id := c.Param("id")
+		if id == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid ID!",
+			})
+			return
+		}
+
+		docID, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid ID!",
+			})
+			return
+		}
+
+		// Get collection from db
+		collection := client.GetCollection(config.Env.DatabaseName, "users")
+
+		// Get context from the request
+		ctx := c.Request.Context()
+
+		// Delete user from database
+		_, err = collection.DeleteOne(ctx, bson.M{"_id": docID})
+		if err != nil {
+			utils.HandleMongoError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, nil)
 	}
 }
