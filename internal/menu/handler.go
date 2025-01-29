@@ -15,6 +15,7 @@ import (
 
 	"github.com/kerimcanbalkan/cafe-orderAPI/config"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/db"
+	"github.com/kerimcanbalkan/cafe-orderAPI/internal/utils"
 )
 
 var validate = validator.New()
@@ -123,7 +124,7 @@ func CreateMenuItem(client *db.MongoClient) gin.HandlerFunc {
 		// Insert the item into the database
 		result, err := collection.InsertOne(ctx, item)
 		if err != nil {
-			handleMongoError(c, err)
+			utils.HandleMongoError(c, err)
 			return
 		}
 
@@ -162,7 +163,7 @@ func DeleteMenuItem(client *db.MongoClient) gin.HandlerFunc {
 		var menuItem MenuItem
 		err = collection.FindOne(ctx, bson.M{"_id": docID}).Decode(&menuItem)
 		if err != nil {
-			handleMongoError(c, err)
+			utils.HandleMongoError(c, err)
 			return
 		}
 
@@ -183,7 +184,7 @@ func DeleteMenuItem(client *db.MongoClient) gin.HandlerFunc {
 		// Now delete the menu item from the database
 		_, err = collection.DeleteOne(ctx, bson.M{"_id": docID})
 		if err != nil {
-			handleMongoError(c, err)
+			utils.HandleMongoError(c, err)
 			return
 		}
 
@@ -219,7 +220,7 @@ func GetMenuByID(client *db.MongoClient) gin.HandlerFunc {
 		var menuItem MenuItem
 		err = collection.FindOne(ctx, bson.M{"_id": docID}).Decode(&menuItem)
 		if err != nil {
-			handleMongoError(c, err)
+			utils.HandleMongoError(c, err)
 			return
 		}
 

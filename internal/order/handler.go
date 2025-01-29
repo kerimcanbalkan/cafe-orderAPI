@@ -14,6 +14,7 @@ import (
 	"github.com/kerimcanbalkan/cafe-orderAPI/config"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/db"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/menu"
+	"github.com/kerimcanbalkan/cafe-orderAPI/internal/utils"
 )
 
 var validate = validator.New()
@@ -65,9 +66,7 @@ func CreateOrder(client *db.MongoClient) gin.HandlerFunc {
 		// Insert the item into the database
 		result, err := collection.InsertOne(ctx, order)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err,
-			})
+			utils.HandleMongoError(c, err)
 			return
 		}
 
@@ -162,9 +161,7 @@ func GetOrders(client *db.MongoClient) gin.HandlerFunc {
 		// Find all documents in the menu collection
 		cursor, err := collection.Find(ctx, query)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err,
-			})
+			utils.HandleMongoError(c, err)
 			return
 		}
 		defer cursor.Close(ctx)
@@ -213,9 +210,7 @@ func ServeOrder(client *db.MongoClient) gin.HandlerFunc {
 		// Updates the first document that has the specified "_id" value
 		_, err := collection.UpdateOne(ctx, filter, update)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err,
-			})
+			utils.HandleMongoError(c, err)
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{
@@ -253,9 +248,7 @@ func CompleteOrder(client *db.MongoClient) gin.HandlerFunc {
 		// Updates the first document that has the specified "_id" value
 		_, err := collection.UpdateOne(ctx, filter, update)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err,
-			})
+			utils.HandleMongoError(c, err)
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{
@@ -321,9 +314,7 @@ func UpdateOrder(client *db.MongoClient) gin.HandlerFunc {
 		// Updates the first document that has the specified "_id" value
 		_, err := collection.UpdateOne(ctx, filter, update)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err.Error(),
-			})
+			utils.HandleMongoError(c, err)
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{

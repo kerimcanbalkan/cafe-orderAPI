@@ -13,6 +13,7 @@ import (
 
 	"github.com/kerimcanbalkan/cafe-orderAPI/config"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/db"
+	"github.com/kerimcanbalkan/cafe-orderAPI/internal/utils"
 )
 
 var validate = validator.New()
@@ -55,9 +56,7 @@ func CreateUser(client *db.MongoClient) gin.HandlerFunc {
 		// Insert the item into the database
 		result, err := collection.InsertOne(ctx, user)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err.Error(),
-			})
+			utils.HandleMongoError(c, err)
 			return
 		}
 
@@ -81,9 +80,7 @@ func GetUsers(client *db.MongoClient) gin.HandlerFunc {
 		// Find all documents in the menu collection
 		cursor, err := collection.Find(ctx, bson.D{})
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err,
-			})
+			utils.HandleMongoError(c, err)
 			return
 		}
 		defer cursor.Close(ctx)
@@ -129,11 +126,8 @@ func Login(client *db.MongoClient) gin.HandlerFunc {
 
 		err := collection.FindOne(ctx, filter).Decode(&user)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "User not found",
-			})
+			utils.HandleMongoError(c, err)
 			return
-
 		}
 
 		err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password))
@@ -194,9 +188,7 @@ func DeleteUser(client *db.MongoClient) gin.HandlerFunc {
 		// Delete user from database
 		_, err = collection.DeleteOne(ctx, bson.M{"_id": docID})
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Could not delete user",
-			})
+			utils.HandleMongoError(c, err)
 			return
 		}
 
