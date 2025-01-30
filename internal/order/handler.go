@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
@@ -57,9 +58,10 @@ func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 		}
 
 		order.TableNumber = table
-		order.Status = false
-		order.Served = false
+		order.IsClosed = false
 		order.CreatedAt = time.Now()
+		order.ServedAt = nil
+		order.HandledBy = primitive.NilObjectID
 
 		var totalPrice float32 = 0.0
 		for _, p := range order.Items {
@@ -107,7 +109,7 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 		ctx := c.Request.Context()
 
 		// Get query parameters
-		status := c.Query("status")
+		isClosed := c.Query("is_closed")
 		served := c.Query("served")
 		table := c.Query("table")
 		date := c.Query("date")
@@ -116,8 +118,8 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 		query := bson.D{}
 
 		// Parse "status" query parameter (convert to boolean)
-		if status != "" {
-			status, err := strconv.ParseBool(status)
+		if isClosed != "" {
+			isClosedBool, err := strconv.ParseBool(isClosed)
 			if err != nil {
 				c.JSON(
 					http.StatusBadRequest,
@@ -125,12 +127,12 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 				)
 				return
 			}
-			query = append(query, bson.E{Key: "status", Value: status})
+			query = append(query, bson.E{Key: "isClosed", Value: isClosedBool})
 		}
 
 		// Parse "served" query parameter
 		if served != "" {
-			served, err := strconv.ParseBool(served)
+			servedBool, err := strconv.ParseBool(served)
 			if err != nil {
 				c.JSON(
 					http.StatusBadRequest,
@@ -138,7 +140,13 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 				)
 				return
 			}
-			query = append(query, bson.E{Key: "served", Value: served})
+			if servedBool {
+				// Orders that have been served (servedAt exists)
+				query = append(query, bson.E{Key: "servedAt", Value: bson.M{"$exists": true}})
+			} else {
+				// Orders that have NOT been served (servedAt does not exist)
+				query = append(query, bson.E{Key: "servedAt", Value: bson.M{"$exists": false}})
+			}
 		}
 
 		// Add table filter
@@ -200,7 +208,7 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 	}
 }
 
-// ServeOrder marks an order as served
+// ServeOrder sets the servedAt and HandledBy fields.
 // @Summary Mark an order as served
 // @Description Allows admin and waiter roles to mark an order as served
 // @Tags order
@@ -220,30 +228,76 @@ func ServeOrder(client db.IMongoClient) gin.HandlerFunc {
 			return
 		}
 
-		id, _ := primitive.ObjectIDFromHex(idParam)
-		filter := bson.D{{Key: "_id", Value: id}}
+		// Convert idParam to ObjectID
+		id, err := primitive.ObjectIDFromHex(idParam)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid Order ID!",
+			})
+			return
+		}
 
-		update := bson.D{
-			{Key: "$set", Value: bson.D{
-				{Key: "served", Value: true},
-			}},
+		// Get claims from Gin context
+		claims, exists := c.Get("claims")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+
+		// Type assert to jwt.MapClaims
+		jwtClaims, ok := claims.(jwt.MapClaims)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid token data"})
+			return
+		}
+
+		// Extract UserID
+		userIDHex, ok := jwtClaims["UserID"].(string)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
+			return
+		}
+		// Convert the string back to primitive.ObjectID
+		userID, err := primitive.ObjectIDFromHex(userIDHex)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid ObjectID"})
+			return
 		}
 
 		// Get the collection from the database
 		collection := client.GetCollection(config.Env.DatabaseName, "orders")
-
-		// Get context from the request
 		ctx := c.Request.Context()
 
-		// Updates the first document that has the specified "_id" value
-		_, err := collection.UpdateOne(ctx, filter, update)
+		// Find the existing order to check the current values
+		var order Order
+		err = collection.FindOne(ctx, bson.D{{Key: "_id", Value: id}}).Decode(&order)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
+			return
+		}
+
+		// If servedAt and handledBy are already set as desired, skip update
+		if order.ServedAt != nil && order.HandledBy == userID {
+			c.JSON(http.StatusOK, gin.H{"message": "Order already served"})
+			return
+		}
+
+		// Prepare the update statement
+		update := bson.D{
+			{Key: "$set", Value: bson.D{
+				{Key: "servedAt", Value: time.Now()},
+				{Key: "handledBy", Value: userID},
+			}},
+		}
+
+		// Perform the update
+		_, err = collection.UpdateOne(ctx, bson.D{{Key: "_id", Value: id}}, update)
 		if err != nil {
 			utils.HandleMongoError(c, err)
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{
-			"message": "Serve status updated successfuly",
-		})
+
+		c.JSON(http.StatusOK, gin.H{"message": "Order served successfully"})
 	}
 }
 
@@ -273,7 +327,7 @@ func CompleteOrder(client db.IMongoClient) gin.HandlerFunc {
 
 		update := bson.D{
 			{Key: "$set", Value: bson.D{
-				{Key: "status", Value: true},
+				{Key: "isClosed", Value: true},
 			}},
 		}
 
