@@ -9,6 +9,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+type IMongoClient interface {
+	GetCollection(dbName, collectionName string) *mongo.Collection
+	Disconnect() error
+}
+
 // MongoClient is the type of the MongoDB client struct.
 type MongoClient struct {
 	client *mongo.Client

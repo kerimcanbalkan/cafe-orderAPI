@@ -29,7 +29,7 @@ var validate = validator.New()
 // @Failure 400 "Invalid request"
 // @Failure 500 "Internal Server Error"
 // @Router /user [post]
-func CreateUser(client *db.MongoClient) gin.HandlerFunc {
+func CreateUser(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var user User
 
@@ -87,7 +87,7 @@ func CreateUser(client *db.MongoClient) gin.HandlerFunc {
 // @Success 200 {object} map[string]interface{} "List of users"
 // @Failure 500  "Internal Server Error"
 // @Router /user [get]
-func GetUsers(client *db.MongoClient) gin.HandlerFunc {
+func GetUsers(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var users []User
 
@@ -136,7 +136,7 @@ type loginBody struct {
 // @Failure 401 "Unauthorized"
 // @Failure 500  "Internal Server Error"
 // @Router /user/login [post]
-func Login(client *db.MongoClient) gin.HandlerFunc {
+func Login(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var body loginBody
 		if err := c.ShouldBindJSON(&body); err != nil {
@@ -204,7 +204,7 @@ func Login(client *db.MongoClient) gin.HandlerFunc {
 // @Failure 404  "User not found"
 // @Failure 500  "Internal Server Error"
 // @Router /user/{id} [delete]
-func DeleteUser(client *db.MongoClient) gin.HandlerFunc {
+func DeleteUser(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 		if id == "" {
