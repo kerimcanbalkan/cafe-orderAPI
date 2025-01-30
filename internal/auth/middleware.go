@@ -69,6 +69,7 @@ func Authenticate(allowedRoles []string) gin.HandlerFunc {
 		}
 
 		// Continue to the next middleware/handler if role matches
+		c.Set("claims", claims)
 		c.Next()
 	}
 }
