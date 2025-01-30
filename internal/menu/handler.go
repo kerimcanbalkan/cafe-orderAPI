@@ -20,6 +20,15 @@ import (
 
 var validate = validator.New()
 
+// GetMenu retrieves all menu items.
+//
+// @Summary Get all menu items
+// @Description Fetches the entire menu from the database
+// @Tags menu
+// @Produce json
+// @Success 200 {object} []MenuItem "List of menu items"
+// @Failure 500
+// @Router /menu [get]
 func GetMenu(client *db.MongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var menu []MenuItem
@@ -51,7 +60,23 @@ func GetMenu(client *db.MongoClient) gin.HandlerFunc {
 	}
 }
 
-// CreateMenu creates
+// CreateMenuItem creates a new menu item.
+//
+// @Summary Create a new menu item
+// @Description Adds a new item to the menu with an image upload. Only accessible by users with the "admin" role.
+// @Tags menu
+// @Accept multipart/form-data
+// @Produce json
+// @Param name formData string true "Name of the item"
+// @Param description formData string true "Description of the item"
+// @Param price formData number true "Price of the item"
+// @Param category formData string true "Category of the item"
+// @Param image formData file true "Image file"
+// @Success 200 {object} map[string]interface{} "Item added successfully"
+// @Failure 400  "Bad Request"
+// @Failure 500 "Internal Server Error"
+// @Security JwtAuth  // JWT token required, only accessible by admin
+// @Router /menu [post]
 func CreateMenuItem(client *db.MongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 2<<20)
@@ -135,6 +160,17 @@ func CreateMenuItem(client *db.MongoClient) gin.HandlerFunc {
 	}
 }
 
+// DeleteMenuItem deletes a menu item by its ID.
+// @Summary Delete a menu item
+// @Description Deletes a menu item and its related image. Only accessible by users with the "admin" role.
+// @Tags menu
+// @Param id path string true "ID of the menu item to delete"
+// @Success 200 {object} nil
+// @Failure 400 "Bad Request"
+// @Failure 404 "Menu item not found"
+// @Failure 500 "Internal Server Error"
+// @Security JwtAuth  // JWT token required, only accessible by admin
+// @Router /menu/{id} [delete]
 func DeleteMenuItem(client *db.MongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
@@ -230,6 +266,14 @@ func GetMenuByID(client *db.MongoClient) gin.HandlerFunc {
 	}
 }
 
+// @Summary Get the image of a menu item
+// @Description Retrieves the image of a menu item by filename. This route is publicly accessible.
+// @Tags menu
+// @Param filename path string true "Filename of the image"
+// @Success 200 {file} File "Image file"
+// @Failure 404  "Image not found"
+// @Failure 500 "Internal Server Error"
+// @Router /menu/images/{filename} [get]
 func GetMenuItemImage(c *gin.Context) {
 	filename := filepath.Base(c.Param("filename"))
 	filePath := "./uploads/" + filename

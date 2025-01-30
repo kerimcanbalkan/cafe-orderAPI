@@ -1,0 +1,240 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "An API for cafe owners to manage menus, process orders, and oversee fulfillment.",
+        "title": "Cafe Order API",
+        "contact": {
+            "name": "Kerimcan Balkan",
+            "url": "https://github.com/kerimcanbalkan",
+            "email": "kerimcanbalkan@gmail.com"
+        },
+        "version": "1"
+    },
+    "host": "localhost:8000",
+    "basePath": "/api/v1",
+    "paths": {
+        "/menu": {
+            "get": {
+                "description": "Fetches the entire menu from the database",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "menu"
+                ],
+                "summary": "Get all menu items",
+                "responses": {
+                    "200": {
+                        "description": "List of menu items",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/menu.MenuItem"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JwtAuth  // JWT token required, only accessible by admin": []
+                    }
+                ],
+                "description": "Adds a new item to the menu with an image upload. Only accessible by users with the \"admin\" role.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "menu"
+                ],
+                "summary": "Create a new menu item",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Name of the item",
+                        "name": "name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Description of the item",
+                        "name": "description",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "Price of the item",
+                        "name": "price",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Category of the item",
+                        "name": "category",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Image file",
+                        "name": "image",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Item added successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/menu/images/{filename}": {
+            "get": {
+                "description": "Retrieves the image of a menu item by filename. This route is publicly accessible.",
+                "tags": [
+                    "menu"
+                ],
+                "summary": "Get the image of a menu item",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filename of the image",
+                        "name": "filename",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Image file",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "404": {
+                        "description": "Image not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/menu/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "JwtAuth  // JWT token required, only accessible by admin": []
+                    }
+                ],
+                "description": "Deletes a menu item and its related image. Only accessible by users with the \"admin\" role.",
+                "tags": [
+                    "menu"
+                ],
+                "summary": "Delete a menu item",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID of the menu item to delete",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "404": {
+                        "description": "Menu item not found"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "menu.MenuItem": {
+            "type": "object",
+            "required": [
+                "category",
+                "description",
+                "image",
+                "name",
+                "price"
+            ],
+            "properties": {
+                "category": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 5
+                },
+                "id": {
+                    "type": "string"
+                },
+                "image": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2
+                },
+                "price": {
+                    "type": "number"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "JwtAuth": {
+            "description": "JWT token required to authenticate users. The token must include a valid role (e.g., \"admin\", \"cashier\", \"waiter\").",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

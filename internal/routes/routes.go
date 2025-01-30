@@ -2,7 +2,10 @@ package routes
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/swaggo/files"
+	"github.com/swaggo/gin-swagger"
 
+	_ "github.com/kerimcanbalkan/cafe-orderAPI/docs"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/auth"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/db"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/menu"
@@ -19,6 +22,9 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 		c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		c.Header("Access-Control-Allow-Origin", "*") // Change "*" to specific origin in production
 	})
+
+	// Documentation
+	r.GET("api/v1//swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Serving Images
 	r.GET("api/v1/images/:filename", menu.GetMenuItemImage)

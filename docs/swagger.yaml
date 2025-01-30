@@ -1,0 +1,167 @@
+basePath: /api/v1
+definitions:
+  menu.MenuItem:
+    properties:
+      category:
+        maxLength: 100
+        minLength: 2
+        type: string
+      description:
+        maxLength: 500
+        minLength: 5
+        type: string
+      id:
+        type: string
+      image:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      price:
+        type: number
+    required:
+    - category
+    - description
+    - image
+    - name
+    - price
+    type: object
+host: localhost:8000
+info:
+  contact:
+    email: kerimcanbalkan@gmail.com
+    name: Kerimcan Balkan
+    url: https://github.com/kerimcanbalkan
+  description: An API for cafe owners to manage menus, process orders, and oversee
+    fulfillment.
+  title: Cafe Order API
+  version: "1"
+paths:
+  /menu:
+    get:
+      description: Fetches the entire menu from the database
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of menu items
+          schema:
+            items:
+              $ref: '#/definitions/menu.MenuItem'
+            type: array
+        "500":
+          description: Internal Server Error
+      summary: Get all menu items
+      tags:
+      - menu
+    post:
+      consumes:
+      - multipart/form-data
+      description: Adds a new item to the menu with an image upload. Only accessible
+        by users with the "admin" role.
+      parameters:
+      - description: Name of the item
+        in: formData
+        name: name
+        required: true
+        type: string
+      - description: Description of the item
+        in: formData
+        name: description
+        required: true
+        type: string
+      - description: Price of the item
+        in: formData
+        name: price
+        required: true
+        type: number
+      - description: Category of the item
+        in: formData
+        name: category
+        required: true
+        type: string
+      - description: Image file
+        in: formData
+        name: image
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Item added successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+        "500":
+          description: Internal Server Error
+      security:
+      - JwtAuth  // JWT token required, only accessible by admin: []
+      summary: Create a new menu item
+      tags:
+      - menu
+  /menu/{id}:
+    delete:
+      description: Deletes a menu item and its related image. Only accessible by users
+        with the "admin" role.
+      parameters:
+      - description: ID of the menu item to delete
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "404":
+          description: Menu item not found
+        "500":
+          description: Internal Server Error
+      security:
+      - JwtAuth  // JWT token required, only accessible by admin: []
+      summary: Delete a menu item
+      tags:
+      - menu
+  /menu/images/{filename}:
+    get:
+      description: Retrieves the image of a menu item by filename. This route is publicly
+        accessible.
+      parameters:
+      - description: Filename of the image
+        in: path
+        name: filename
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Image file
+          schema:
+            type: file
+        "404":
+          description: Image not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get the image of a menu item
+      tags:
+      - menu
+securityDefinitions:
+  JwtAuth:
+    description: JWT token required to authenticate users. The token must include
+      a valid role (e.g., "admin", "cashier", "waiter").
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
