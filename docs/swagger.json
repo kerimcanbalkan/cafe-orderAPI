@@ -133,22 +133,10 @@
                         }
                     },
                     "404": {
-                        "description": "Image not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
+                        "description": "Image not found"
                     },
                     "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
+                        "description": "Internal Server Error"
                     }
                 }
             }
@@ -183,6 +171,202 @@
                     },
                     "404": {
                         "description": "Menu item not found"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/order": {
+            "get": {
+                "security": [
+                    {
+                        "JwtAuth  // JWT token required, accessible by admin, cashier, and waiter roles": []
+                    }
+                ],
+                "description": "Retrieves all orders for admin, cashier, and waiter roles",
+                "tags": [
+                    "order"
+                ],
+                "summary": "Get all orders",
+                "responses": {
+                    "200": {
+                        "description": "List of orders with their IDs",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/order.Order"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/order/complete/{id}": {
+            "patch": {
+                "security": [
+                    {
+                        "JwtAuth  // JWT token required, accessible by admin and cashier roles": []
+                    }
+                ],
+                "description": "Allows admin and cashier roles to mark an order as complete",
+                "tags": [
+                    "order"
+                ],
+                "summary": "Mark an order as complete",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Order ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Order completed successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Order not found"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/order/serve/{id}": {
+            "patch": {
+                "security": [
+                    {
+                        "JwtAuth  // JWT token required, accessible by admin and waiter roles": []
+                    }
+                ],
+                "description": "Allows admin and waiter roles to mark an order as served",
+                "tags": [
+                    "order"
+                ],
+                "summary": "Mark an order as served",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Order ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Order served successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Order not found"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/order/{id}": {
+            "patch": {
+                "security": [
+                    {
+                        "JwtAuth  // JWT token required, accessible by admin, cashier, and waiter roles": []
+                    }
+                ],
+                "description": "Allows admin, cashier, and waiter roles to update an order",
+                "tags": [
+                    "order"
+                ],
+                "summary": "Update an existing order",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Order ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Order update details",
+                        "name": "order",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/order.Order"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Order updated successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request"
+                    },
+                    "404": {
+                        "description": "Order not found"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/order/{table}": {
+            "post": {
+                "description": "Creates a new order for a specific table and saves it in the database",
+                "tags": [
+                    "order"
+                ],
+                "summary": "Create a new order",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Table number",
+                        "name": "table",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Order details",
+                        "name": "order",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/order.Order"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Order created successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request"
                     },
                     "500": {
                         "description": "Internal Server Error"
@@ -224,6 +408,38 @@
                     "minLength": 2
                 },
                 "price": {
+                    "type": "number"
+                }
+            }
+        },
+        "order.Order": {
+            "type": "object",
+            "required": [
+                "items"
+            ],
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/menu.MenuItem"
+                    }
+                },
+                "served": {
+                    "type": "boolean"
+                },
+                "status": {
+                    "type": "boolean"
+                },
+                "tableNumber": {
+                    "type": "integer"
+                },
+                "totalPrice": {
                     "type": "number"
                 }
             }

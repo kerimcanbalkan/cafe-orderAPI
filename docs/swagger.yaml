@@ -27,6 +27,27 @@ definitions:
     - name
     - price
     type: object
+  order.Order:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/menu.MenuItem'
+        type: array
+      served:
+        type: boolean
+      status:
+        type: boolean
+      tableNumber:
+        type: integer
+      totalPrice:
+        type: number
+    required:
+    - items
+    type: object
 host: localhost:8000
 info:
   contact:
@@ -144,19 +165,136 @@ paths:
             type: file
         "404":
           description: Image not found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
         "500":
           description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
       summary: Get the image of a menu item
       tags:
       - menu
+  /order:
+    get:
+      description: Retrieves all orders for admin, cashier, and waiter roles
+      responses:
+        "200":
+          description: List of orders with their IDs
+          schema:
+            items:
+              $ref: '#/definitions/order.Order'
+            type: array
+        "500":
+          description: Internal Server Error
+      security:
+      - JwtAuth  // JWT token required, accessible by admin, cashier, and waiter roles: []
+      summary: Get all orders
+      tags:
+      - order
+  /order/{id}:
+    patch:
+      description: Allows admin, cashier, and waiter roles to update an order
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Order update details
+        in: body
+        name: order
+        required: true
+        schema:
+          $ref: '#/definitions/order.Order'
+      responses:
+        "200":
+          description: Order updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+        "404":
+          description: Order not found
+        "500":
+          description: Internal Server Error
+      security:
+      - JwtAuth  // JWT token required, accessible by admin, cashier, and waiter roles: []
+      summary: Update an existing order
+      tags:
+      - order
+  /order/{table}:
+    post:
+      description: Creates a new order for a specific table and saves it in the database
+      parameters:
+      - description: Table number
+        in: path
+        name: table
+        required: true
+        type: integer
+      - description: Order details
+        in: body
+        name: order
+        required: true
+        schema:
+          $ref: '#/definitions/order.Order'
+      responses:
+        "200":
+          description: Order created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+        "500":
+          description: Internal Server Error
+      summary: Create a new order
+      tags:
+      - order
+  /order/complete/{id}:
+    patch:
+      description: Allows admin and cashier roles to mark an order as complete
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Order completed successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Order not found
+        "500":
+          description: Internal Server Error
+      security:
+      - JwtAuth  // JWT token required, accessible by admin and cashier roles: []
+      summary: Mark an order as complete
+      tags:
+      - order
+  /order/serve/{id}:
+    patch:
+      description: Allows admin and waiter roles to mark an order as served
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Order served successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Order not found
+        "500":
+          description: Internal Server Error
+      security:
+      - JwtAuth  // JWT token required, accessible by admin and waiter roles: []
+      summary: Mark an order as served
+      tags:
+      - order
 securityDefinitions:
   JwtAuth:
     description: JWT token required to authenticate users. The token must include
