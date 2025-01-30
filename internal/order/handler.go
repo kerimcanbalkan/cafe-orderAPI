@@ -92,7 +92,7 @@ func CreateOrder(client *db.MongoClient) gin.HandlerFunc {
 // @Summary Get all orders
 // @Description Retrieves all orders for admin, cashier, and waiter roles
 // @Tags order
-// @Security JwtAuth  // JWT token required, accessible by admin, cashier, and waiter roles
+// @Security bearerToken
 // @Success 200 {array} Order "List of orders with their IDs"
 // @Failure 500 "Internal Server Error"
 // @Router /order [get]
@@ -205,7 +205,7 @@ func GetOrders(client *db.MongoClient) gin.HandlerFunc {
 // @Description Allows admin and waiter roles to mark an order as served
 // @Tags order
 // @Param id path string true "Order ID"
-// @Security JwtAuth  // JWT token required, accessible by admin and waiter roles
+// @Security bearerToken
 // @Success 200 {object} map[string]interface{} "Order served successfully"
 // @Failure 404 "Order not found"
 // @Failure 500  "Internal Server Error"
@@ -253,7 +253,7 @@ func ServeOrder(client *db.MongoClient) gin.HandlerFunc {
 // @Description Allows admin and cashier roles to mark an order as complete
 // @Tags order
 // @Param id path string true "Order ID"
-// @Security JwtAuth  // JWT token required, accessible by admin and cashier roles
+// @Security bearerToken
 // @Success 200 {object} map[string]interface{} "Order completed successfully"
 // @Failure 404  "Order not found"
 // @Failure 500  "Internal Server Error"
@@ -302,7 +302,7 @@ func CompleteOrder(client *db.MongoClient) gin.HandlerFunc {
 // @Tags order
 // @Param id path string true "Order ID"
 // @Param order body Order true "Order update details"
-// @Security JwtAuth  // JWT token required, accessible by admin, cashier, and waiter roles
+// @Security bearerToken
 // @Success 200 {object} map[string]interface{} "Order updated successfully"
 // @Failure 400  "Invalid request"
 // @Failure 404  "Order not found"

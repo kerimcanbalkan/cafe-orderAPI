@@ -9,10 +9,9 @@
 // @contact.url https://github.com/kerimcanbalkan
 // @contact.email kerimcanbalkan@gmail.com
 
-// @securityDefinitions.apikey JwtAuth
+// @securityDefinitions.apikey bearerToken
 // @in header
 // @name Authorization
-// @description JWT token required to authenticate users. The token must include a valid role (e.g., "admin", "cashier", "waiter").
 
 // @host localhost:8000
 // @BasePath /api/v1

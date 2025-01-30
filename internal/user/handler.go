@@ -18,6 +18,17 @@ import (
 
 var validate = validator.New()
 
+// CreateUser creates a new user and saves it to the database
+//
+// @Summary Create a new user
+// @Description Allows admin role to create a new user
+// @Tags user
+// @Param user body User true "User details"
+// @Security bearerToken
+// @Success 200 {object} map[string]interface{} "User created successfully"
+// @Failure 400 "Invalid request"
+// @Failure 500 "Internal Server Error"
+// @Router /user [post]
 func CreateUser(client *db.MongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var user User
@@ -67,6 +78,15 @@ func CreateUser(client *db.MongoClient) gin.HandlerFunc {
 	}
 }
 
+// GetUsers retrieves all users from the database
+//
+// @Summary Retrieve all users
+// @Description Allows admin role to retrieve a list of all users
+// @Tags user
+// @Security bearerToken
+// @Success 200 {object} map[string]interface{} "List of users"
+// @Failure 500  "Internal Server Error"
+// @Router /user [get]
 func GetUsers(client *db.MongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var users []User
@@ -105,6 +125,17 @@ type loginBody struct {
 	Password string `form:"password" json:"password"`
 }
 
+// Login authenticates a user and returns a JWT token
+//
+// @Summary User login
+// @Description Allows users to log in by providing username and password
+// @Tags user
+// @Param loginBody body loginBody true "Login details"
+// @Success 200 {object} map[string]interface{} "JWT token and expiration time"
+// @Failure 400  "Invalid request"
+// @Failure 401 "Unauthorized"
+// @Failure 500  "Internal Server Error"
+// @Router /user/login [post]
 func Login(client *db.MongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var body loginBody
@@ -161,6 +192,18 @@ func Login(client *db.MongoClient) gin.HandlerFunc {
 	}
 }
 
+// DeleteUser deletes a user by their ID
+//
+// @Summary Delete a user
+// @Description Allows admin role to delete a user by their ID
+// @Tags user
+// @Param id path string true "User ID"
+// @Security bearerToken
+// @Success 200 {object} nil "User deleted successfully"
+// @Failure 400  "Invalid ID"
+// @Failure 404  "User not found"
+// @Failure 500  "Internal Server Error"
+// @Router /user/{id} [delete]
 func DeleteUser(client *db.MongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")

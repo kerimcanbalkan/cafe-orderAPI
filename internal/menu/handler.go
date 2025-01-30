@@ -75,7 +75,7 @@ func GetMenu(client *db.MongoClient) gin.HandlerFunc {
 // @Success 200 {object} map[string]interface{} "Item added successfully"
 // @Failure 400  "Bad Request"
 // @Failure 500 "Internal Server Error"
-// @Security JwtAuth  // JWT token required, only accessible by admin
+// @Security bearerToken
 // @Router /menu [post]
 func CreateMenuItem(client *db.MongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -169,7 +169,7 @@ func CreateMenuItem(client *db.MongoClient) gin.HandlerFunc {
 // @Failure 400 "Bad Request"
 // @Failure 404 "Menu item not found"
 // @Failure 500 "Internal Server Error"
-// @Security JwtAuth  // JWT token required, only accessible by admin
+// @Security bearerToken
 // @Router /menu/{id} [delete]
 func DeleteMenuItem(client *db.MongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {

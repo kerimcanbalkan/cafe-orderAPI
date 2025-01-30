@@ -47,7 +47,7 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "JwtAuth  // JWT token required, only accessible by admin": []
+                        "bearerToken": []
                     }
                 ],
                 "description": "Adds a new item to the menu with an image upload. Only accessible by users with the \"admin\" role.",
@@ -151,7 +151,7 @@ const docTemplate = `{
             "delete": {
                 "security": [
                     {
-                        "JwtAuth  // JWT token required, only accessible by admin": []
+                        "bearerToken": []
                     }
                 ],
                 "description": "Deletes a menu item and its related image. Only accessible by users with the \"admin\" role.",
@@ -188,7 +188,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "JwtAuth  // JWT token required, accessible by admin, cashier, and waiter roles": []
+                        "bearerToken": []
                     }
                 ],
                 "description": "Retrieves all orders for admin, cashier, and waiter roles",
@@ -216,7 +216,7 @@ const docTemplate = `{
             "patch": {
                 "security": [
                     {
-                        "JwtAuth  // JWT token required, accessible by admin and cashier roles": []
+                        "bearerToken": []
                     }
                 ],
                 "description": "Allows admin and cashier roles to mark an order as complete",
@@ -254,7 +254,7 @@ const docTemplate = `{
             "patch": {
                 "security": [
                     {
-                        "JwtAuth  // JWT token required, accessible by admin and waiter roles": []
+                        "bearerToken": []
                     }
                 ],
                 "description": "Allows admin and waiter roles to mark an order as served",
@@ -292,7 +292,7 @@ const docTemplate = `{
             "patch": {
                 "security": [
                     {
-                        "JwtAuth  // JWT token required, accessible by admin, cashier, and waiter roles": []
+                        "bearerToken": []
                     }
                 ],
                 "description": "Allows admin, cashier, and waiter roles to update an order",
@@ -379,6 +379,145 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/user": {
+            "get": {
+                "security": [
+                    {
+                        "bearerToken": []
+                    }
+                ],
+                "description": "Allows admin role to retrieve a list of all users",
+                "tags": [
+                    "user"
+                ],
+                "summary": "Retrieve all users",
+                "responses": {
+                    "200": {
+                        "description": "List of users",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "bearerToken": []
+                    }
+                ],
+                "description": "Allows admin role to create a new user",
+                "tags": [
+                    "user"
+                ],
+                "summary": "Create a new user",
+                "parameters": [
+                    {
+                        "description": "User details",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/user.User"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User created successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/user/login": {
+            "post": {
+                "description": "Allows users to log in by providing username and password",
+                "tags": [
+                    "user"
+                ],
+                "summary": "User login",
+                "parameters": [
+                    {
+                        "description": "Login details",
+                        "name": "loginBody",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/user.loginBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "JWT token and expiration time",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/user/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "bearerToken": []
+                    }
+                ],
+                "description": "Allows admin role to delete a user by their ID",
+                "tags": [
+                    "user"
+                ],
+                "summary": "Delete a user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User deleted successfully"
+                    },
+                    "400": {
+                        "description": "Invalid ID"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -449,11 +588,79 @@ const docTemplate = `{
                     "type": "number"
                 }
             }
+        },
+        "user.User": {
+            "type": "object",
+            "required": [
+                "email",
+                "gender",
+                "name",
+                "password",
+                "role",
+                "surname",
+                "username"
+            ],
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "gender": {
+                    "type": "string",
+                    "enum": [
+                        "male",
+                        "female"
+                    ]
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 20,
+                    "minLength": 2
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 20,
+                    "minLength": 8
+                },
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "admin",
+                        "cashier",
+                        "waiter"
+                    ]
+                },
+                "surname": {
+                    "type": "string",
+                    "maxLength": 20,
+                    "minLength": 2
+                },
+                "username": {
+                    "type": "string",
+                    "maxLength": 20,
+                    "minLength": 2
+                }
+            }
+        },
+        "user.loginBody": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
         }
     },
     "securityDefinitions": {
-        "JwtAuth": {
-            "description": "JWT token required to authenticate users. The token must include a valid role (e.g., \"admin\", \"cashier\", \"waiter\").",
+        "bearerToken": {
             "type": "apiKey",
             "name": "Authorization",
             "in": "header"
