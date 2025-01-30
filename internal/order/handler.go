@@ -30,7 +30,7 @@ var validate = validator.New()
 // @Failure 400  "Invalid request"
 // @Failure 500  "Internal Server Error"
 // @Router /order/{table} [post]
-func CreateOrder(client *db.MongoClient) gin.HandlerFunc {
+func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tableStr := c.Param("table")
 		table, err := strconv.Atoi(tableStr)
@@ -96,7 +96,7 @@ func CreateOrder(client *db.MongoClient) gin.HandlerFunc {
 // @Success 200 {array} Order "List of orders with their IDs"
 // @Failure 500 "Internal Server Error"
 // @Router /order [get]
-func GetOrders(client *db.MongoClient) gin.HandlerFunc {
+func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var orders []Order
 
@@ -210,7 +210,7 @@ func GetOrders(client *db.MongoClient) gin.HandlerFunc {
 // @Failure 404 "Order not found"
 // @Failure 500  "Internal Server Error"
 // @Router /order/serve/{id} [patch]
-func ServeOrder(client *db.MongoClient) gin.HandlerFunc {
+func ServeOrder(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		idParam := c.Param("id")
 		if idParam == "" {
@@ -258,7 +258,7 @@ func ServeOrder(client *db.MongoClient) gin.HandlerFunc {
 // @Failure 404  "Order not found"
 // @Failure 500  "Internal Server Error"
 // @Router /order/complete/{id} [patch]
-func CompleteOrder(client *db.MongoClient) gin.HandlerFunc {
+func CompleteOrder(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		idParam := c.Param("id")
 		if idParam == "" {
@@ -308,7 +308,7 @@ func CompleteOrder(client *db.MongoClient) gin.HandlerFunc {
 // @Failure 404  "Order not found"
 // @Failure 500  "Internal Server Error"
 // @Router /order/{id} [patch]
-func UpdateOrder(client *db.MongoClient) gin.HandlerFunc {
+func UpdateOrder(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		idParam := c.Param("id")
 		if idParam == "" {

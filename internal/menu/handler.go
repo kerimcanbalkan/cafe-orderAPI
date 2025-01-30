@@ -29,7 +29,7 @@ var validate = validator.New()
 // @Success 200 {object} []MenuItem "List of menu items"
 // @Failure 500
 // @Router /menu [get]
-func GetMenu(client *db.MongoClient) gin.HandlerFunc {
+func GetMenu(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var menu []MenuItem
 
@@ -77,7 +77,7 @@ func GetMenu(client *db.MongoClient) gin.HandlerFunc {
 // @Failure 500 "Internal Server Error"
 // @Security bearerToken
 // @Router /menu [post]
-func CreateMenuItem(client *db.MongoClient) gin.HandlerFunc {
+func CreateMenuItem(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 2<<20)
 		// Parse form data
@@ -171,7 +171,7 @@ func CreateMenuItem(client *db.MongoClient) gin.HandlerFunc {
 // @Failure 500 "Internal Server Error"
 // @Security bearerToken
 // @Router /menu/{id} [delete]
-func DeleteMenuItem(client *db.MongoClient) gin.HandlerFunc {
+func DeleteMenuItem(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 		if id == "" {
@@ -228,7 +228,7 @@ func DeleteMenuItem(client *db.MongoClient) gin.HandlerFunc {
 	}
 }
 
-func GetMenuByID(client *db.MongoClient) gin.HandlerFunc {
+func GetMenuByID(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 		if id == "" {
