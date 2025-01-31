@@ -196,6 +196,32 @@ const docTemplate = `{
                     "order"
                 ],
                 "summary": "Get all orders",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "Filter by closed status (true/false)",
+                        "name": "is_closed",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by served status (true/false)",
+                        "name": "served",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by table number",
+                        "name": "table",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by order date (YYYY-MM-DD)",
+                        "name": "date",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "List of orders with their IDs",
@@ -566,8 +592,14 @@ const docTemplate = `{
                 "createdAt": {
                     "type": "string"
                 },
+                "handledBy": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
+                },
+                "isClosed": {
+                    "type": "boolean"
                 },
                 "items": {
                     "type": "array",
@@ -575,11 +607,8 @@ const docTemplate = `{
                         "$ref": "#/definitions/menu.MenuItem"
                     }
                 },
-                "served": {
-                    "type": "boolean"
-                },
-                "status": {
-                    "type": "boolean"
+                "servedAt": {
+                    "type": "string"
                 },
                 "tableNumber": {
                     "type": "integer"

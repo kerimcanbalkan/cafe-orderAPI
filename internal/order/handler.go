@@ -95,6 +95,10 @@ func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 // @Description Retrieves all orders for admin, cashier, and waiter roles
 // @Tags order
 // @Security bearerToken
+// @Param is_closed query boolean false "Filter by closed status (true/false)"
+// @Param served query boolean false "Filter by served status (true/false)"
+// @Param table query int false "Filter by table number"
+// @Param date query string false "Filter by order date (YYYY-MM-DD)"
 // @Success 200 {array} Order "List of orders with their IDs"
 // @Failure 500 "Internal Server Error"
 // @Router /order [get]

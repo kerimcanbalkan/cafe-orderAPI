@@ -31,16 +31,18 @@ definitions:
     properties:
       createdAt:
         type: string
+      handledBy:
+        type: string
       id:
         type: string
+      isClosed:
+        type: boolean
       items:
         items:
           $ref: '#/definitions/menu.MenuItem'
         type: array
-      served:
-        type: boolean
-      status:
-        type: boolean
+      servedAt:
+        type: string
       tableNumber:
         type: integer
       totalPrice:
@@ -224,6 +226,23 @@ paths:
   /order:
     get:
       description: Retrieves all orders for admin, cashier, and waiter roles
+      parameters:
+      - description: Filter by closed status (true/false)
+        in: query
+        name: is_closed
+        type: boolean
+      - description: Filter by served status (true/false)
+        in: query
+        name: served
+        type: boolean
+      - description: Filter by table number
+        in: query
+        name: table
+        type: integer
+      - description: Filter by order date (YYYY-MM-DD)
+        in: query
+        name: date
+        type: string
       responses:
         "200":
           description: List of orders with their IDs
