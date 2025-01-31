@@ -42,6 +42,7 @@ func main() {
 	defer cancel()
 
 	user.SeedAdminUser(client, rootCtx)
+	db.EnsureIndexes(client, rootCtx, config.Env.DatabaseName)
 
 	// Setup gin router
 	r := gin.Default()
