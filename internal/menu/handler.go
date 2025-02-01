@@ -55,7 +55,7 @@ func GetMenu(client db.IMongoClient) gin.HandlerFunc {
 
 		// Return the menu in the response
 		c.JSON(http.StatusOK, gin.H{
-			"menu": menu,
+			"data": menu,
 		})
 	}
 }
@@ -155,7 +155,7 @@ func CreateMenuItem(client db.IMongoClient) gin.HandlerFunc {
 
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Item added successfully",
-			"item_id": result.InsertedID,
+			"id":      result.InsertedID,
 		})
 	}
 }
@@ -261,7 +261,7 @@ func GetMenuByID(client db.IMongoClient) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, gin.H{
-			"item": menuItem,
+			"data": menuItem,
 		})
 	}
 }

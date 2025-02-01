@@ -83,8 +83,8 @@ func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, gin.H{
-			"message":  "Order created successfuly",
-			"order_id": result.InsertedID,
+			"message": "Order created successfuly",
+			"id":      result.InsertedID,
 		})
 	}
 }
@@ -200,14 +200,14 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 		// Decode the results into the menu slice
 		if err := cursor.All(ctx, &orders); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err,
+				"error": "Could not get orders.",
 			})
 			return
 		}
 
 		// Return the menu in the response
 		c.JSON(http.StatusOK, gin.H{
-			"orders": orders,
+			"data": orders,
 		})
 	}
 }

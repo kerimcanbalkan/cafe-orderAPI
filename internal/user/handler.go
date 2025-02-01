@@ -73,7 +73,7 @@ func CreateUser(client db.IMongoClient) gin.HandlerFunc {
 
 		c.JSON(http.StatusOK, gin.H{
 			"message": "User created successfuly",
-			"user_id": result.InsertedID,
+			"id":      result.InsertedID,
 		})
 	}
 }
@@ -115,7 +115,7 @@ func GetUsers(client db.IMongoClient) gin.HandlerFunc {
 
 		// Return the menu in the response
 		c.JSON(http.StatusOK, gin.H{
-			"users": users,
+			"data": users,
 		})
 	}
 }
