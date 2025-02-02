@@ -9,6 +9,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/kerimcanbalkan/cafe-orderAPI/config"
@@ -67,6 +68,15 @@ func CreateUser(client db.IMongoClient) gin.HandlerFunc {
 		// Insert the item into the database
 		result, err := collection.InsertOne(ctx, user)
 		if err != nil {
+			if mongo.IsDuplicateKeyError(err) {
+				c.JSON(
+					http.StatusConflict,
+					gin.H{
+						"error": "Username or email already exists. Please choose a different one.",
+					},
+				)
+				return
+			}
 			utils.HandleMongoError(c, err)
 			return
 		}
@@ -100,6 +110,11 @@ func GetUsers(client db.IMongoClient) gin.HandlerFunc {
 		// Find all documents in the menu collection
 		cursor, err := collection.Find(ctx, bson.D{})
 		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				c.JSON(http.StatusNotFound, gin.H{
+					"error": "User not found.",
+				})
+			}
 			utils.HandleMongoError(c, err)
 			return
 		}
@@ -108,7 +123,7 @@ func GetUsers(client db.IMongoClient) gin.HandlerFunc {
 		// Decode the results into the menu slice
 		if err := cursor.All(ctx, &users); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err,
+				"error": "Failed to parse database response.",
 			})
 			return
 		}
@@ -157,6 +172,10 @@ func Login(client db.IMongoClient) gin.HandlerFunc {
 
 		err := collection.FindOne(ctx, filter).Decode(&user)
 		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				c.JSON(http.StatusNotFound, gin.H{"error": "User not found."})
+				return
+			}
 			utils.HandleMongoError(c, err)
 			return
 		}
@@ -229,9 +248,15 @@ func DeleteUser(client db.IMongoClient) gin.HandlerFunc {
 		ctx := c.Request.Context()
 
 		// Delete user from database
-		_, err = collection.DeleteOne(ctx, bson.M{"_id": docID})
+		result, err := collection.DeleteOne(ctx, bson.M{"_id": docID})
 		if err != nil {
 			utils.HandleMongoError(c, err)
+			return
+		}
+
+		// Check if a document was actually deleted
+		if result.DeletedCount == 0 {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found."})
 			return
 		}
 

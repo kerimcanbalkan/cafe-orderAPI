@@ -12,6 +12,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/kerimcanbalkan/cafe-orderAPI/config"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/db"
@@ -49,7 +50,9 @@ func GetMenu(client db.IMongoClient) gin.HandlerFunc {
 
 		// Decode the results into the menu slice
 		if err := cursor.All(ctx, &menu); err != nil {
-			handleMongoError(c, err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to parse database response.",
+			})
 			return
 		}
 
@@ -149,6 +152,12 @@ func CreateMenuItem(client db.IMongoClient) gin.HandlerFunc {
 		// Insert the item into the database
 		result, err := collection.InsertOne(ctx, item)
 		if err != nil {
+			if mongo.IsDuplicateKeyError(err) {
+				c.JSON(http.StatusConflict, gin.H{
+					"error": fmt.Sprintf("Menu item named %s already exists", item.Name),
+				})
+				return
+			}
 			utils.HandleMongoError(c, err)
 			return
 		}
@@ -199,6 +208,12 @@ func DeleteMenuItem(client db.IMongoClient) gin.HandlerFunc {
 		var menuItem MenuItem
 		err = collection.FindOne(ctx, bson.M{"_id": docID}).Decode(&menuItem)
 		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				c.JSON(http.StatusNotFound, gin.H{
+					"error": "Menu item not found",
+				})
+				return
+			}
 			utils.HandleMongoError(c, err)
 			return
 		}
@@ -218,9 +233,15 @@ func DeleteMenuItem(client db.IMongoClient) gin.HandlerFunc {
 		}
 
 		// Now delete the menu item from the database
-		_, err = collection.DeleteOne(ctx, bson.M{"_id": docID})
+		result, err := collection.DeleteOne(ctx, bson.M{"_id": docID})
 		if err != nil {
 			utils.HandleMongoError(c, err)
+			return
+		}
+
+		// Check if a document was actually deleted
+		if result.DeletedCount == 0 {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Menu item not found."})
 			return
 		}
 

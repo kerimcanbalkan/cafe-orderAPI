@@ -11,6 +11,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/kerimcanbalkan/cafe-orderAPI/config"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/db"
@@ -200,7 +201,7 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 		// Decode the results into the menu slice
 		if err := cursor.All(ctx, &orders); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Could not get orders.",
+				"error": "Failed to parse database response.",
 			})
 			return
 		}
@@ -276,7 +277,11 @@ func ServeOrder(client db.IMongoClient) gin.HandlerFunc {
 		var order Order
 		err = collection.FindOne(ctx, bson.D{{Key: "_id", Value: id}}).Decode(&order)
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
+			if err == mongo.ErrNoDocuments {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
+				return
+			}
+			utils.HandleMongoError(c, err)
 			return
 		}
 
@@ -342,11 +347,18 @@ func CompleteOrder(client db.IMongoClient) gin.HandlerFunc {
 		ctx := c.Request.Context()
 
 		// Updates the first document that has the specified "_id" value
-		_, err := collection.UpdateOne(ctx, filter, update)
+		result, err := collection.UpdateOne(ctx, filter, update)
 		if err != nil {
 			utils.HandleMongoError(c, err)
 			return
 		}
+
+		// Check if a document was actually updated
+		if result.MatchedCount == 0 {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Order not found."})
+			return
+		}
+
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Complete status updated successfuly",
 		})
@@ -420,9 +432,15 @@ func UpdateOrder(client db.IMongoClient) gin.HandlerFunc {
 		ctx := c.Request.Context()
 
 		// Updates the first document that has the specified "_id" value
-		_, err := collection.UpdateOne(ctx, filter, update)
+		result, err := collection.UpdateOne(ctx, filter, update)
 		if err != nil {
 			utils.HandleMongoError(c, err)
+			return
+		}
+
+		// Check if a document was actually updated
+		if result.MatchedCount == 0 {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Order not found."})
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{

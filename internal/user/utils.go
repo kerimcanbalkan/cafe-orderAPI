@@ -42,7 +42,7 @@ func ValidateUser(v *validator.Validate, user User) error {
 					fieldErr.Param(),
 				)
 			case "oneof":
-				return fmt.Errorf(fieldErr.Error())
+				return fmt.Errorf("%s must be male or female", fieldErr.Error())
 			case "email":
 				return fmt.Errorf("%s must be a valid email", fieldErr.Field())
 			default:
