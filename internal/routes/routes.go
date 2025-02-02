@@ -13,6 +13,7 @@ import (
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/user"
 )
 
+// SetupRoutes initializes and registers all API routes and middleware for the Gin engine.
 func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 	// Middleware to add headers globally
 	r.Use(func(c *gin.Context) {
