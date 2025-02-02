@@ -10,6 +10,8 @@ import (
 	"github.com/kerimcanbalkan/cafe-orderAPI/config"
 )
 
+// Authenticate is a middleware function that validates
+// JWT tokens and authorizes users based on their roles.
 func Authenticate(allowedRoles []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get token from the request header

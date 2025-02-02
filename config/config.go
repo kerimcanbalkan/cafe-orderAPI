@@ -26,7 +26,7 @@ func LoadConfig() *Config {
 		Secret:               getEnv("SECRET", "reallysecuresecret"),
 	}
 
-	// Log loaded configuration (excluding sensitive information in production)
+	// Log loaded configuration (remove in production)
 	log.Printf("Config loaded: %+v\n", config)
 	return config
 }

@@ -9,6 +9,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// EnsureIndexes creates necessary indexes for the MongoDB collections to
+// enforce uniqueness and improve query performance.
 func EnsureIndexes(client IMongoClient, ctx context.Context, dbName string) {
 	// Indexes for users collection
 	usersCollection := client.GetCollection(dbName, "users")

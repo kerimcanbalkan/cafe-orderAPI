@@ -228,44 +228,6 @@ func DeleteMenuItem(client db.IMongoClient) gin.HandlerFunc {
 	}
 }
 
-func GetMenuByID(client db.IMongoClient) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		id := c.Param("id")
-		if id == "" {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Invalid ID!",
-			})
-			return
-		}
-
-		docID, err := primitive.ObjectIDFromHex(id)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Invalid ID!",
-			})
-			return
-		}
-
-		// Get collection from db
-		collection := client.GetCollection(config.Env.DatabaseName, "menu")
-
-		// Get context from the request
-		ctx := c.Request.Context()
-
-		// Retrieve the menu item
-		var menuItem MenuItem
-		err = collection.FindOne(ctx, bson.M{"_id": docID}).Decode(&menuItem)
-		if err != nil {
-			utils.HandleMongoError(c, err)
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{
-			"data": menuItem,
-		})
-	}
-}
-
 // @Summary Get the image of a menu item
 // @Description Retrieves the image of a menu item by filename. This route is publicly accessible.
 // @Tags menu

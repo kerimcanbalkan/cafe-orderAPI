@@ -41,6 +41,7 @@ func main() {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// Ensure defaults to database
 	user.SeedAdminUser(client, rootCtx)
 	db.EnsureIndexes(client, rootCtx, config.Env.DatabaseName)
 
