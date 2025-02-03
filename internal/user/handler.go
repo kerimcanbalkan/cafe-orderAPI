@@ -135,7 +135,7 @@ func GetUsers(client db.IMongoClient) gin.HandlerFunc {
 	}
 }
 
-type loginBody struct {
+type LoginBody struct {
 	Username string `form:"username" json:"username"`
 	Password string `form:"password" json:"password"`
 }
@@ -153,7 +153,7 @@ type loginBody struct {
 // @Router /user/login [post]
 func Login(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var body loginBody
+		var body LoginBody
 		if err := c.ShouldBindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "Invalid request body",
@@ -248,15 +248,16 @@ func DeleteUser(client db.IMongoClient) gin.HandlerFunc {
 		ctx := c.Request.Context()
 
 		// Delete user from database
-		result, err := collection.DeleteOne(ctx, bson.M{"_id": docID})
-		if err != nil {
-			utils.HandleMongoError(c, err)
-			return
-		}
+		result := collection.FindOneAndDelete(ctx, bson.D{{Key: "_id", Value: docID}})
 
-		// Check if a document was actually deleted
-		if result.DeletedCount == 0 {
-			c.JSON(http.StatusNotFound, gin.H{"error": "User not found."})
+		var deletedUser User
+		err = result.Decode(&deletedUser)
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+				return
+			}
+			utils.HandleMongoError(c, err)
 			return
 		}
 
