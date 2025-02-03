@@ -53,6 +53,8 @@ func ValidateUser(v *validator.Validate, user User) error {
 	return nil
 }
 
+// SeedAdminUser ensures that an admin user exists in the database.
+// If an admin user is not found, it creates one with credentials from environment variables.
 func SeedAdminUser(client *db.MongoClient, ctx context.Context) {
 	collection := client.GetCollection(config.Env.DatabaseName, "users")
 
