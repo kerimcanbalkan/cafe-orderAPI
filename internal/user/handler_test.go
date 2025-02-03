@@ -1,6 +1,7 @@
 package user_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -19,6 +20,10 @@ import (
 
 type UsersResponse struct {
 	Data []user.User `json:"data"`
+}
+
+type UserErrorResponse struct {
+	Error string `json:"error"`
 }
 
 func TestGetUsers(t *testing.T) {
@@ -90,15 +95,9 @@ func TestGetUsers(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/test/user", nil)
 		r.ServeHTTP(w, req)
 
-		// Log response body for debugging
-		mt.Log("response", w.Body.String())
-
 		// Unmarshal into the wrapper struct
 		var usersResponse UsersResponse
 		err := json.Unmarshal(w.Body.Bytes(), &usersResponse)
-		if err != nil {
-			mt.Log("Unmarshal error: ", err)
-		}
 		assert.Nil(t, err)
 
 		assert.Equal(t, 200, w.Code)
@@ -106,5 +105,194 @@ func TestGetUsers(t *testing.T) {
 		assert.Equal(t, "Kerim", usersResponse.Data[0].Name)
 		assert.Equal(t, "female", usersResponse.Data[1].Gender)
 		assert.Equal(t, "Balkan", usersResponse.Data[1].Surname)
+	})
+}
+
+type CreateResponse struct {
+	Message string `json:"message"`
+	ID      string `json:"id"`
+}
+
+func TestCreateUser(t *testing.T) {
+	mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
+
+	usr := user.User{
+		Name:     "Eda",
+		Surname:  "Balkan",
+		Gender:   "female",
+		Email:    "edabalkan@gmail.com",
+		Username: "eda",
+		Password: "123456321",
+		Role:     "cashier",
+	}
+
+	mt.Run("success", func(mt *mtest.T) {
+		body, _ := json.Marshal(usr)
+		mt.AddMockResponses(mtest.CreateSuccessResponse())
+
+		// Create mock client
+		mockClient := db.NewMockMongoClient(mt.Coll)
+
+		// Test route
+		r := gin.Default()
+		r.POST("/test/user", user.CreateUser(mockClient))
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/test/user", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		r.ServeHTTP(w, req)
+
+		// Unmarshal into the wrapper struct
+		var createResponse CreateResponse
+		err := json.Unmarshal(w.Body.Bytes(), &createResponse)
+
+		assert.Nil(t, err)
+		assert.Equal(t, "User created successfuly", createResponse.Message)
+	})
+
+	mt.Run("custom error duplicate", func(mt *mtest.T) {
+		body, _ := json.Marshal(usr)
+		mt.AddMockResponses(mtest.CreateWriteErrorsResponse(mtest.WriteError{
+			Index:   1,
+			Code:    11000,
+			Message: "duplicate key error",
+		}))
+
+		// Create mock client
+		mockClient := db.NewMockMongoClient(mt.Coll)
+
+		// Test route
+		r := gin.Default()
+		r.POST("/test/user", user.CreateUser(mockClient))
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/test/user", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		r.ServeHTTP(w, req)
+
+		// Unmarshal into the wrapper struct
+		var userErrorResponse UserErrorResponse
+		err := json.Unmarshal(w.Body.Bytes(), &userErrorResponse)
+		assert.Nil(t, err)
+		assert.Equal(t,
+			"Username or email already exists. Please choose a different one.",
+			userErrorResponse.Error,
+		)
+	})
+}
+
+func TestUserValidation(t *testing.T) {
+	mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
+
+	mt.Run("custom error validation", func(mt *mtest.T) {
+		mockClient := db.NewMockMongoClient(mt.Coll)
+
+		r := gin.Default()
+		r.POST("/test/user", user.CreateUser(mockClient))
+
+		cases := []struct {
+			name          string
+			input         user.User
+			expectedError string
+		}{
+			{
+				"Missing Name",
+				user.User{
+					Surname:  "Doe",
+					Gender:   "male",
+					Email:    "john@example.com",
+					Username: "johndoe",
+					Password: "password123",
+					Role:     "admin",
+				},
+				"Name is required",
+			},
+			{
+				"Name Too Short",
+				user.User{
+					Name:     "Jo",
+					Surname:  "Doe",
+					Gender:   "male",
+					Email:    "john@example.com",
+					Username: "johndoe",
+					Password: "password123",
+					Role:     "admin",
+				},
+				"Name must be at least 3 characters",
+			},
+			{
+				"Password Too Short",
+				user.User{
+					Name:     "John",
+					Surname:  "Doe",
+					Gender:   "male",
+					Email:    "john@example.com",
+					Username: "johndoe",
+					Password: "123456",
+					Role:     "admin",
+				},
+				"Password must be at least 8 characters",
+			},
+			{
+				"Invalid Email",
+				user.User{
+					Name:     "John",
+					Surname:  "Doe",
+					Gender:   "male",
+					Email:    "invalid-email",
+					Username: "johndoe",
+					Password: "password123",
+					Role:     "admin",
+				},
+				"Email must be a valid email",
+			},
+			{
+				"Invalid Gender",
+				user.User{
+					Name:     "John",
+					Surname:  "Doe",
+					Gender:   "other",
+					Email:    "john@example.com",
+					Username: "johndoe",
+					Password: "password123",
+					Role:     "admin",
+				},
+				"Gender must be male or female",
+			},
+			{
+				"Invalid Role",
+				user.User{
+					Name:     "John",
+					Surname:  "Doe",
+					Gender:   "male",
+					Email:    "john@example.com",
+					Username: "johndoe",
+					Password: "password123",
+					Role:     "manager",
+				},
+				"Role should be one of the following [admin, waiter, cashier]",
+			},
+		}
+
+		for _, tc := range cases {
+			body, _ := json.Marshal(tc.input)
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest("POST", "/test/user", bytes.NewBuffer(body))
+			req.Header.Set("Content-Type", "application/json")
+
+			r.ServeHTTP(w, req)
+
+			var response UserErrorResponse
+			json.Unmarshal(w.Body.Bytes(), &response)
+
+			if tc.expectedError == "" {
+				assert.Equal(t, http.StatusOK, w.Code)
+			} else {
+				assert.Equal(t, http.StatusBadRequest, w.Code)
+				assert.Equal(t, tc.expectedError, response.Error)
+			}
+		}
 	})
 }
