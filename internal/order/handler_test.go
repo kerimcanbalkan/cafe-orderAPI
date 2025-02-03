@@ -95,7 +95,8 @@ func TestGetOrders(t *testing.T) {
 		})
 
 		// Simulate cursor close
-		killCursors := mtest.CreateCursorResponse(0, "testDB.menu", mtest.NextBatch)
+		killCursors := mtest.CreateCursorResponse(0, "testDB.orders", mtest.NextBatch)
+
 		mt.AddMockResponses(first, second, killCursors)
 		// Create mock client
 		mockClient := db.NewMockMongoClient(mt.Coll)
