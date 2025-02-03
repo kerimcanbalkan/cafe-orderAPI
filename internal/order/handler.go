@@ -64,7 +64,7 @@ func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 		order.ServedAt = nil
 		order.HandledBy = primitive.NilObjectID
 
-		var totalPrice float32 = 0.0
+		var totalPrice float64 = 0.0
 		for _, p := range order.Items {
 			totalPrice += p.Price
 		}
@@ -401,7 +401,7 @@ func UpdateOrder(client db.IMongoClient) gin.HandlerFunc {
 			return
 		}
 
-		totalPrice := float32(0)
+		totalPrice := float64(0)
 
 		// Validate Items
 		for _, item := range orderItems {

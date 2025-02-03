@@ -132,7 +132,7 @@ func CreateMenuItem(client db.IMongoClient) gin.HandlerFunc {
 		item := MenuItem{
 			Name:        name,
 			Description: description,
-			Price:       float32(priceFloat),
+			Price:       float64(priceFloat),
 			Category:    category,
 			Img:         imagePath,
 		}
