@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -294,5 +295,128 @@ func TestUserValidation(t *testing.T) {
 				assert.Equal(t, tc.expectedError, response.Error)
 			}
 		}
+	})
+}
+
+func TestDeleteUser(t *testing.T) {
+	mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
+
+	mt.Run("success", func(mt *mtest.T) {
+		// Create mock client
+		mockClient := db.NewMockMongoClient(mt.Coll)
+
+		id := primitive.NewObjectID().Hex()
+		// Mock a deleted user response
+		mt.AddMockResponses(bson.D{
+			{Key: "ok", Value: 1},
+			{Key: "value", Value: bson.D{
+				{Key: "_id", Value: id},
+				{Key: "name", Value: "John"},
+				{Key: "surname", Value: "Doe"},
+				{Key: "gender", Value: "male"},
+				{Key: "email", Value: "johndoe@example.com"},
+				{Key: "username", Value: "johndoe"},
+				{
+					Key:   "password",
+					Value: "$2a$10$r/hOOqj2CLcVweIvPz23ZOlB8PLRI84pxG4ZqM.fbIYAjqRJcxh82",
+				},
+				{Key: "role", Value: "waiter"},
+				{Key: "created_at", Value: time.Now()},
+			}},
+		})
+
+		// Test route
+		r := gin.Default()
+		r.DELETE("/test/user/:id", user.DeleteUser(mockClient))
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("DELETE", "/test/user/"+id, nil)
+
+		r.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	mt.Run("custom not found error", func(mt *mtest.T) {
+		// Create mock client
+		mockClient := db.NewMockMongoClient(mt.Coll)
+
+		id := primitive.NewObjectID().Hex()
+		// Mock a deleted user response
+		mt.AddMockResponses(
+			bson.D{{Key: "ok", Value: 1}, {Key: "acknowledged", Value: true}, {Key: "n", Value: 0}},
+		)
+
+		// Test route
+		r := gin.Default()
+		r.DELETE("/test/user/:id", user.DeleteUser(mockClient))
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("DELETE", "/test/user/"+id, nil)
+
+		r.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+	})
+}
+
+func TestLogin(t *testing.T) {
+	mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
+
+	mt.Run("success", func(mt *mtest.T) {
+		// Create mock client
+		mockClient := db.NewMockMongoClient(mt.Coll)
+
+		id := primitive.NewObjectID().Hex()
+
+		// Mock a FindOne user response
+		mt.AddMockResponses(mtest.CreateCursorResponse(1, "testDB.users", mtest.FirstBatch, bson.D{
+			{Key: "_id", Value: id},
+			{Key: "name", Value: "John"},
+			{Key: "surname", Value: "Doe"},
+			{Key: "gender", Value: "male"},
+			{Key: "email", Value: "johndoe@example.com"},
+			{Key: "username", Value: "johndoe"},
+			{
+				Key:   "password",
+				Value: "$2a$10$r/hOOqj2CLcVweIvPz23ZOlB8PLRI84pxG4ZqM.fbIYAjqRJcxh82",
+			},
+			{Key: "role", Value: "waiter"},
+			{Key: "created_at", Value: time.Now()},
+		}))
+
+		// Test route
+		r := gin.Default()
+		r.POST("/test/user/login", user.Login(mockClient))
+		loginBody := user.LoginBody{
+			Username: "johndoe",
+			Password: "password",
+		}
+
+		body, _ := json.Marshal(loginBody)
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/test/user/login", bytes.NewBuffer(body))
+
+		r.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		// Parse the response body
+		var response map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+
+		// Assert the response contains the expected fields
+		assert.Contains(t, response, "expires_in")
+		assert.Equal(t, float64(2592000), response["expires_in"])
+
+		assert.Contains(t, response, "token")
+		token, ok := response["token"].(string)
+		assert.True(t, ok)
+		assert.NotEmpty(t, token)
+
+		// Check if the token has a valid format (JWT has 3 parts)
+		tokenParts := strings.Split(token, ".")
+		assert.Len(t, tokenParts, 3, "token should have 3 parts")
 	})
 }
