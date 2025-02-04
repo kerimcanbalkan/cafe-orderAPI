@@ -52,6 +52,13 @@ func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 			return
 		}
 
+		if len(order.Items) == 0 {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Order should include items",
+			})
+			return
+		}
+
 		// Validate the struct
 		if err = validateOrder(validate, order); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
