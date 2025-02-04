@@ -132,7 +132,7 @@ func CreateMenuItem(client db.IMongoClient) gin.HandlerFunc {
 		item := MenuItem{
 			Name:        name,
 			Description: description,
-			Price:       float32(priceFloat),
+			Price:       float64(priceFloat),
 			Category:    category,
 			Img:         imagePath,
 		}
@@ -204,46 +204,21 @@ func DeleteMenuItem(client db.IMongoClient) gin.HandlerFunc {
 		// Get context from the request
 		ctx := c.Request.Context()
 
-		// Retrieve the menu item to get the image path
-		var menuItem MenuItem
-		err = collection.FindOne(ctx, bson.M{"_id": docID}).Decode(&menuItem)
+		// Delete menu item from database
+		result := collection.FindOneAndDelete(ctx, bson.D{{Key: "_id", Value: docID}})
+
+		var deletedItem MenuItem
+		err = result.Decode(&deletedItem)
 		if err != nil {
 			if err == mongo.ErrNoDocuments {
-				c.JSON(http.StatusNotFound, gin.H{
-					"error": "Menu item not found",
-				})
+				c.JSON(http.StatusNotFound, gin.H{"error": "Item not found"})
 				return
 			}
 			utils.HandleMongoError(c, err)
 			return
 		}
 
-		// Delete the image from the /uploads directory
-		if menuItem.Img != "" {
-			err = os.Remove(menuItem.Img)
-			if err != nil {
-				if !os.IsNotExist(err) {
-
-					c.JSON(http.StatusInternalServerError, gin.H{
-						"error": "Could not remove related files",
-					})
-					return
-				}
-			}
-		}
-
-		// Now delete the menu item from the database
-		result, err := collection.DeleteOne(ctx, bson.M{"_id": docID})
-		if err != nil {
-			utils.HandleMongoError(c, err)
-			return
-		}
-
-		// Check if a document was actually deleted
-		if result.DeletedCount == 0 {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Menu item not found."})
-			return
-		}
+		_ = os.Remove(deletedItem.Img)
 
 		c.JSON(http.StatusOK, nil)
 	}
@@ -265,6 +240,7 @@ func GetMenuItemImage(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Image not found",
 		})
+		return
 	}
 
 	// Determine content type

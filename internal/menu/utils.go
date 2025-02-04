@@ -26,7 +26,6 @@ func isAllowedImageType(mimeType string) bool {
 func ValidateMenu(v *validator.Validate, item MenuItem) error {
 	// Perform validation
 	if err := v.Struct(item); err != nil {
-
 		if _, ok := err.(*validator.InvalidValidationError); ok {
 			fmt.Println(err)
 			return nil
@@ -49,14 +48,12 @@ func ValidateMenu(v *validator.Validate, item MenuItem) error {
 					fieldErr.Field(),
 					fieldErr.Param(),
 				)
-			case "gte":
+			case "gt":
 				return fmt.Errorf(
-					"%s must be greater than or equal to %s",
+					"%s must be greater than %s",
 					fieldErr.Field(),
 					fieldErr.Param(),
 				)
-			case "url":
-				return fmt.Errorf("%s must be a valid URL", fieldErr.Field())
 			case "number":
 				return fmt.Errorf("%s must be a valid number", fieldErr.Field())
 			default:

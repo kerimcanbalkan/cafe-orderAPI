@@ -52,6 +52,30 @@ func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 			return
 		}
 
+		if len(order.Items) == 0 {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Order should include items",
+			})
+			return
+		}
+
+		totalPrice := float64(0)
+
+		// Validate Items
+		for _, item := range order.Items {
+			if err = menu.ValidateMenu(validate, item); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"error": fmt.Sprintf(
+						"Validation failed for item %s: %s",
+						item.Name,
+						err.Error(),
+					),
+				})
+				return
+			}
+			totalPrice += item.Price
+		}
+
 		// Validate the struct
 		if err = validateOrder(validate, order); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -63,11 +87,6 @@ func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 		order.CreatedAt = time.Now()
 		order.ServedAt = nil
 		order.HandledBy = primitive.NilObjectID
-
-		var totalPrice float32 = 0.0
-		for _, p := range order.Items {
-			totalPrice += p.Price
-		}
 		order.TotalPrice = totalPrice
 
 		// Get the collection
@@ -273,24 +292,6 @@ func ServeOrder(client db.IMongoClient) gin.HandlerFunc {
 		collection := client.GetCollection(config.Env.DatabaseName, "orders")
 		ctx := c.Request.Context()
 
-		// Find the existing order to check the current values
-		var order Order
-		err = collection.FindOne(ctx, bson.D{{Key: "_id", Value: id}}).Decode(&order)
-		if err != nil {
-			if err == mongo.ErrNoDocuments {
-				c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
-				return
-			}
-			utils.HandleMongoError(c, err)
-			return
-		}
-
-		// If servedAt and handledBy are already set as desired, skip update
-		if order.ServedAt != nil && order.HandledBy == userID {
-			c.JSON(http.StatusOK, gin.H{"message": "Order already served"})
-			return
-		}
-
 		// Prepare the update statement
 		update := bson.D{
 			{Key: "$set", Value: bson.D{
@@ -299,9 +300,16 @@ func ServeOrder(client db.IMongoClient) gin.HandlerFunc {
 			}},
 		}
 
-		// Perform the update
-		_, err = collection.UpdateOne(ctx, bson.D{{Key: "_id", Value: id}}, update)
+		// Find order and if exists update
+		result := collection.FindOneAndUpdate(ctx, bson.D{{Key: "_id", Value: id}}, update)
+
+		var order Order
+		err = result.Decode(&order)
 		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
+				return
+			}
 			utils.HandleMongoError(c, err)
 			return
 		}
@@ -371,7 +379,7 @@ func CompleteOrder(client db.IMongoClient) gin.HandlerFunc {
 // @Description Allows admin, cashier, and waiter roles to update an order
 // @Tags order
 // @Param id path string true "Order ID"
-// @Param order body Order true "Order update details"
+// @Param order body []menu.MenuItem true "Order update details"
 // @Security bearerToken
 // @Success 200 {object} map[string]interface{} "Order updated successfully"
 // @Failure 400  "Invalid request"
@@ -401,7 +409,7 @@ func UpdateOrder(client db.IMongoClient) gin.HandlerFunc {
 			return
 		}
 
-		totalPrice := float32(0)
+		totalPrice := float64(0)
 
 		// Validate Items
 		for _, item := range orderItems {
