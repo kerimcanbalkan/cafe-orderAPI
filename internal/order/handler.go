@@ -379,7 +379,7 @@ func CompleteOrder(client db.IMongoClient) gin.HandlerFunc {
 // @Description Allows admin, cashier, and waiter roles to update an order
 // @Tags order
 // @Param id path string true "Order ID"
-// @Param order body Order true "Order update details"
+// @Param order body []menu.MenuItem true "Order update details"
 // @Security bearerToken
 // @Success 200 {object} map[string]interface{} "Order updated successfully"
 // @Failure 400  "Invalid request"
