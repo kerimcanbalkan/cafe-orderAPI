@@ -398,3 +398,63 @@ func generateMultipartForm(item menu.MenuItem, buffer *bytes.Buffer) (*multipart
 
 	return writer, nil
 }
+
+func TestDeleteMenuItem(t *testing.T) {
+	mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
+
+	mt.Run("success", func(mt *mtest.T) {
+		// Create mock client
+		mockClient := db.NewMockMongoClient(mt.Coll)
+
+		// Generate id
+		id := primitive.NewObjectID().Hex()
+
+		// Mock a deleted menu item response
+		mt.AddMockResponses(bson.D{
+			{Key: "ok", Value: 1},
+			{Key: "value", Value: bson.D{
+				{Key: "_id", Value: id},
+				{Key: "name", Value: "Coffee"},
+				{Key: "description", Value: "Enjoy a freshly brewed cup of coffee..."},
+				{Key: "price", Value: 1.5},
+				{Key: "category", Value: "drink"},
+				{
+					Key:   "image",
+					Value: "uploads/77sF65eeRcVpCDpLjr5Wad",
+				},
+			}},
+		})
+		// Test route
+		r := gin.Default()
+		r.DELETE("/test/menu/:id", menu.DeleteMenuItem(mockClient))
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("DELETE", "/test/menu/"+id, nil)
+		mt.Log("THIS IS THE ACTUAL RESPONSE", w.Body.String())
+
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	mt.Run("custom not found error", func(mt *mtest.T) {
+		// Create mock client
+		mockClient := db.NewMockMongoClient(mt.Coll)
+
+		id := primitive.NewObjectID().Hex()
+		// Mock a deleted user response
+		mt.AddMockResponses(
+			bson.D{{Key: "ok", Value: 1}, {Key: "acknowledged", Value: true}, {Key: "n", Value: 0}},
+		)
+
+		// Test route
+		r := gin.Default()
+		r.DELETE("/test/menu/:id", menu.DeleteMenuItem(mockClient))
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("DELETE", "/test/menu/"+id, nil)
+
+		r.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+	})
+}
