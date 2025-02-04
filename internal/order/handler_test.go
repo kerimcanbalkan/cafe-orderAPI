@@ -1,6 +1,7 @@
 package order_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -119,5 +120,83 @@ func TestGetOrders(t *testing.T) {
 		assert.Equal(t, 10.99, orderResponse.Data[0].TotalPrice)
 		assert.Equal(t, 3, orderResponse.Data[1].TableNumber)
 		assert.Equal(t, "Pasta", orderResponse.Data[1].Items[0].Name)
+	})
+}
+
+type CreateResponse struct {
+	Message string `json:"message"`
+	ID      string `json:"id"`
+}
+
+func TestCreateOrder(t *testing.T) {
+	mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
+
+	o := order.Order{
+		Items: []menu.MenuItem{
+			{
+				ID:          primitive.NewObjectID(),
+				Name:        "Pizza",
+				Description: "Cheese pizza",
+				Price:       10.99,
+				Category:    "Food",
+				Img:         "pizza.jpg",
+			},
+		},
+	}
+
+	mt.Run("success", func(mt *mtest.T) {
+		body, _ := json.Marshal(o)
+		mt.AddMockResponses(mtest.CreateSuccessResponse())
+
+		// Create mock client
+		mockClient := db.NewMockMongoClient(mt.Coll)
+
+		// Test route
+		r := gin.Default()
+		r.POST("/test/order/:table", order.CreateOrder(mockClient))
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/test/order/5", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		r.ServeHTTP(w, req)
+
+		// Unmarshal into the wrapper struct
+		var createResponse CreateResponse
+		err := json.Unmarshal(w.Body.Bytes(), &createResponse)
+
+		assert.Nil(t, err)
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, "Order created successfuly", createResponse.Message)
+	})
+}
+
+func TestOrderValidation(t *testing.T) {
+	mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
+
+	mt.Run("custom error validation", func(mt *mtest.T) {
+		o := order.Order{
+			Items: []menu.MenuItem{},
+		}
+		mockClient := db.NewMockMongoClient(mt.Coll)
+
+		mt.Log("item lenght", len(o.Items))
+
+		r := gin.Default()
+		r.POST("/test/order/:table", order.CreateOrder(mockClient))
+
+		body, _ := json.Marshal(o)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/test/order/1", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		r.ServeHTTP(w, req)
+
+		var response OrderErrorResponse
+		json.Unmarshal(w.Body.Bytes(), &response)
+		mt.Log("ACTUAL RESPONSE", w.Body.String())
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, "Order should include items", response.Error)
 	})
 }
