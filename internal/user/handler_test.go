@@ -288,12 +288,8 @@ func TestUserValidation(t *testing.T) {
 			var response UserErrorResponse
 			json.Unmarshal(w.Body.Bytes(), &response)
 
-			if tc.expectedError == "" {
-				assert.Equal(t, http.StatusOK, w.Code)
-			} else {
-				assert.Equal(t, http.StatusBadRequest, w.Code)
-				assert.Equal(t, tc.expectedError, response.Error)
-			}
+			assert.Equal(t, http.StatusBadRequest, w.Code)
+			assert.Equal(t, tc.expectedError, response.Error)
 		}
 	})
 }
