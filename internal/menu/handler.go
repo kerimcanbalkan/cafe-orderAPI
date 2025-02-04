@@ -240,6 +240,7 @@ func GetMenuItemImage(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Image not found",
 		})
+		return
 	}
 
 	// Determine content type
