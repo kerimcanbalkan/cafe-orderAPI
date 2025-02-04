@@ -1,4 +1,4 @@
-package order_test
+package test
 
 import (
 	"bytes"
@@ -18,13 +18,6 @@ import (
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/menu"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/order"
 )
-
-type OrderResponse struct {
-	Data []order.Order `json:"data"`
-}
-type OrderErrorResponse struct {
-	Error string `json:"error"`
-}
 
 func TestGetOrders(t *testing.T) {
 	mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
@@ -123,11 +116,6 @@ func TestGetOrders(t *testing.T) {
 	})
 }
 
-type CreateResponse struct {
-	Message string `json:"message"`
-	ID      string `json:"id"`
-}
-
 func TestCreateOrder(t *testing.T) {
 	mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
 
@@ -192,7 +180,7 @@ func TestOrderValidation(t *testing.T) {
 
 		r.ServeHTTP(w, req)
 
-		var response OrderErrorResponse
+		var response ErrorResponse
 		json.Unmarshal(w.Body.Bytes(), &response)
 		mt.Log("ACTUAL RESPONSE", w.Body.String())
 

@@ -1,4 +1,4 @@
-package user_test
+package test
 
 import (
 	"bytes"
@@ -18,14 +18,6 @@ import (
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/db"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/user"
 )
-
-type UsersResponse struct {
-	Data []user.User `json:"data"`
-}
-
-type UserErrorResponse struct {
-	Error string `json:"error"`
-}
 
 func TestGetUsers(t *testing.T) {
 	mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
@@ -109,11 +101,6 @@ func TestGetUsers(t *testing.T) {
 	})
 }
 
-type CreateResponse struct {
-	Message string `json:"message"`
-	ID      string `json:"id"`
-}
-
 func TestCreateUser(t *testing.T) {
 	mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
 
@@ -174,7 +161,7 @@ func TestCreateUser(t *testing.T) {
 		r.ServeHTTP(w, req)
 
 		// Unmarshal into the wrapper struct
-		var userErrorResponse UserErrorResponse
+		var userErrorResponse ErrorResponse
 		err := json.Unmarshal(w.Body.Bytes(), &userErrorResponse)
 		assert.Nil(t, err)
 		assert.Equal(t,
@@ -285,7 +272,7 @@ func TestUserValidation(t *testing.T) {
 
 			r.ServeHTTP(w, req)
 
-			var response UserErrorResponse
+			var response ErrorResponse
 			json.Unmarshal(w.Body.Bytes(), &response)
 
 			assert.Equal(t, http.StatusBadRequest, w.Code)

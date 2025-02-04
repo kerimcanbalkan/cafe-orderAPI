@@ -1,4 +1,4 @@
-package menu_test
+package test
 
 import (
 	"bytes"
@@ -23,14 +23,6 @@ import (
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/db"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/menu"
 )
-
-type MenuResponse struct {
-	Data []menu.MenuItem `json:"data"`
-}
-
-type MenuErrorResponse struct {
-	Error string `json:"error"`
-}
 
 func TestGetMenu(t *testing.T) {
 	mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
@@ -78,11 +70,6 @@ func TestGetMenu(t *testing.T) {
 		assert.Equal(t, "Burger", menuResponse.Data[0].Name)
 		assert.Equal(t, "Pizza", menuResponse.Data[1].Name)
 	})
-}
-
-type CreateResponse struct {
-	Message string `json:"message"`
-	ID      string `json:"id"`
 }
 
 func TestCreateMenu(t *testing.T) {
@@ -159,7 +146,7 @@ func TestCreateMenu(t *testing.T) {
 		r.ServeHTTP(w, req)
 
 		// Unmarshal into the wrapper struct
-		var errorResponse MenuErrorResponse
+		var errorResponse ErrorResponse
 		err = json.Unmarshal(w.Body.Bytes(), &errorResponse)
 		assert.Nil(t, err)
 		assert.Equal(t,
@@ -325,7 +312,7 @@ func TestMenuValidation(t *testing.T) {
 
 			r.ServeHTTP(w, req)
 
-			var response MenuErrorResponse
+			var response ErrorResponse
 			json.Unmarshal(w.Body.Bytes(), &response)
 			mt.Log("this is what has been returned", w.Body.String())
 
@@ -526,7 +513,7 @@ func TestGetMenuItemImage_NotFound(t *testing.T) {
 	// Perform the request
 	r.ServeHTTP(w, req)
 
-	var response MenuErrorResponse
+	var response ErrorResponse
 	json.Unmarshal(w.Body.Bytes(), &response)
 	t.Log(w.Body.String())
 
