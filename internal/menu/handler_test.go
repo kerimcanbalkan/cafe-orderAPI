@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/textproto"
+	"os"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -430,7 +431,6 @@ func TestDeleteMenuItem(t *testing.T) {
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("DELETE", "/test/menu/"+id, nil)
-		mt.Log("THIS IS THE ACTUAL RESPONSE", w.Body.String())
 
 		r.ServeHTTP(w, req)
 		assert.Equal(t, http.StatusOK, w.Code)
@@ -457,4 +457,79 @@ func TestDeleteMenuItem(t *testing.T) {
 
 		assert.Equal(t, http.StatusNotFound, w.Code)
 	})
+}
+
+func TestGetMenuItemImage(t *testing.T) {
+	// Create a test router
+	r := gin.Default()
+
+	// Serve the route
+	r.GET("/menu-item/image/:filename", menu.GetMenuItemImage)
+
+	// Ensure the uploads directory exists
+	uploadsDir := "./uploads"
+	if err := os.MkdirAll(uploadsDir, os.ModePerm); err != nil {
+		t.Fatalf("Failed to create uploads directory: %v", err)
+	}
+
+	// Generate placeholder image
+	imageData, err := generatePlaceholderImage()
+	if err != nil {
+		t.Fatalf("Failed to generate placeholder image: %v", err)
+	}
+
+	// Define the test image path
+	testImage := uploadsDir + "/test-image.jpg"
+
+	// Write the generated image to the file
+	err = os.WriteFile(testImage, imageData, 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test image file: %v", err)
+	}
+	defer os.Remove(testImage) // Cleanup after test
+
+	// Create a test request to the route with a valid filename
+	req, err := http.NewRequest("GET", "/menu-item/image/test-image.jpg", nil)
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+
+	// Create a response recorder to capture the response
+	w := httptest.NewRecorder()
+
+	// Perform the request
+	r.ServeHTTP(w, req)
+
+	// Assert that the status code is OK (200)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// Assert that the Content-Type header is correctly set (should detect as image/jpeg)
+	assert.Equal(t, "image/jpeg", w.Header().Get("Content-Type"))
+}
+
+func TestGetMenuItemImage_NotFound(t *testing.T) {
+	// Create a test router
+	r := gin.Default()
+
+	// Serve the route
+	r.GET("/menu-item/image/:filename", menu.GetMenuItemImage)
+
+	// Create a request for a non-existent file
+	req, err := http.NewRequest("GET", "/menu-item/image/nonexistent.jpg", nil)
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+
+	// Create a response recorder to capture the response
+	w := httptest.NewRecorder()
+
+	// Perform the request
+	r.ServeHTTP(w, req)
+
+	var response MenuErrorResponse
+	json.Unmarshal(w.Body.Bytes(), &response)
+	t.Log(w.Body.String())
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	assert.Equal(t, "Image not found", response.Error)
 }
