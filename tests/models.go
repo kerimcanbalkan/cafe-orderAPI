@@ -24,3 +24,7 @@ type OrderResponse struct {
 type MenuResponse struct {
 	Data []menu.MenuItem `json:"data"`
 }
+
+type SuccessResponse struct {
+	Message string `json:"message"`
+}
