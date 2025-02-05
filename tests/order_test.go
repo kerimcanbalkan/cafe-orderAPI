@@ -188,3 +188,77 @@ func TestOrderValidation(t *testing.T) {
 		assert.Equal(t, "Order should include items", response.Error)
 	})
 }
+
+func TestUpdateOrder(t *testing.T) {
+	o := []menu.MenuItem{
+		{
+			ID:          primitive.NewObjectID(),
+			Name:        "Pizza",
+			Description: "Cheese pizza",
+			Price:       10.99,
+			Category:    "Food",
+			Img:         "pizza.jpg",
+		},
+	}
+	mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
+
+	mt.Run("success", func(mt *mtest.T) {
+		mockClient := db.NewMockMongoClient(mt.Coll)
+
+		mt.AddMockResponses(
+			bson.D{
+				{Key: "ok", Value: 1},
+				{Key: "acknowledged", Value: true},
+				{Key: "n", Value: 1},
+			},
+		)
+
+		r := gin.Default()
+		r.PATCH("/test/order/:id", order.UpdateOrder(mockClient))
+		id := o[0].ID.Hex()
+
+		body, _ := json.Marshal(o)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("PATCH", "/test/order/"+id, bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		r.ServeHTTP(w, req)
+		mt.Log("ACTUAL RESPONSE", w.Body.String())
+
+		var response SuccessResponse
+		json.Unmarshal(w.Body.Bytes(), &response)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, "Order updated succesfully", response.Message)
+	})
+
+	mt.Run("custom error not found", func(mt *mtest.T) {
+		mockClient := db.NewMockMongoClient(mt.Coll)
+
+		mt.AddMockResponses(
+			bson.D{
+				{Key: "ok", Value: 1},
+				{Key: "acknowledged", Value: true},
+				{Key: "n", Value: int32(0)},
+			},
+		)
+
+		r := gin.Default()
+		r.PATCH("/test/order/:id", order.UpdateOrder(mockClient))
+		id := o[0].ID.Hex()
+
+		body, _ := json.Marshal(o)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("PATCH", "/test/order/"+id, bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		r.ServeHTTP(w, req)
+		mt.Log("ACTUAL RESPONSE", w.Body.String())
+
+		var response ErrorResponse
+		json.Unmarshal(w.Body.Bytes(), &response)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+		assert.Equal(t, "Order not found.", response.Error)
+	})
+}
