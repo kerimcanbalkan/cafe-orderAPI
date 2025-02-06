@@ -16,6 +16,7 @@ import (
 	"github.com/kerimcanbalkan/cafe-orderAPI/config"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/db"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/menu"
+	"github.com/kerimcanbalkan/cafe-orderAPI/internal/sse"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/utils"
 )
 
@@ -35,7 +36,7 @@ var validate = validator.New()
 func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tableStr := c.Param("table")
-		table, err := strconv.Atoi(tableStr)
+		table, err := convertTableNumber(tableStr)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "Invalid table number",
@@ -82,7 +83,7 @@ func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 			return
 		}
 
-		order.TableNumber = table
+		order.TableNumber = uint8(table)
 		order.ClosedAt = nil
 		order.CreatedAt = time.Now()
 		order.ServedAt = nil
@@ -101,6 +102,8 @@ func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 			utils.HandleMongoError(c, err)
 			return
 		}
+
+		sse.Notify(table)
 
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Order created successfuly",
