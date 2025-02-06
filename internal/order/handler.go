@@ -83,7 +83,7 @@ func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 		}
 
 		order.TableNumber = table
-		order.IsClosed = false
+		order.ClosedAt = nil
 		order.CreatedAt = time.Now()
 		order.ServedAt = nil
 		order.HandledBy = primitive.NilObjectID
@@ -143,7 +143,7 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 
 		// Parse "status" query parameter (convert to boolean)
 		if isClosed != "" {
-			isClosedBool, err := strconv.ParseBool(isClosed)
+			bool, err := strconv.ParseBool(isClosed)
 			if err != nil {
 				c.JSON(
 					http.StatusBadRequest,
@@ -151,12 +151,12 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 				)
 				return
 			}
-			query = append(query, bson.E{Key: "isClosed", Value: isClosedBool})
+			query = append(query, bson.E{Key: "isClosed", Value: bson.M{"$exists": bool}})
 		}
 
 		// Parse "served" query parameter
 		if served != "" {
-			servedBool, err := strconv.ParseBool(served)
+			bool, err := strconv.ParseBool(served)
 			if err != nil {
 				c.JSON(
 					http.StatusBadRequest,
@@ -164,13 +164,7 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 				)
 				return
 			}
-			if servedBool {
-				// Orders that have been served (servedAt exists)
-				query = append(query, bson.E{Key: "servedAt", Value: bson.M{"$exists": true}})
-			} else {
-				// Orders that have NOT been served (servedAt does not exist)
-				query = append(query, bson.E{Key: "servedAt", Value: bson.M{"$exists": false}})
-			}
+			query = append(query, bson.E{Key: "servedAt", Value: bson.M{"$exists": bool}})
 		}
 
 		// Add table filter
@@ -344,7 +338,7 @@ func CompleteOrder(client db.IMongoClient) gin.HandlerFunc {
 
 		update := bson.D{
 			{Key: "$set", Value: bson.D{
-				{Key: "isClosed", Value: true},
+				{Key: "closedAt", Value: time.Now()},
 			}},
 		}
 
