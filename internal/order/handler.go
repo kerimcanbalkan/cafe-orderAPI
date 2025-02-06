@@ -151,7 +151,7 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 				)
 				return
 			}
-			query = append(query, bson.E{Key: "isClosed", Value: bson.M{"$exists": bool}})
+			query = append(query, bson.E{Key: "closedAt", Value: bson.M{"$exists": bool}})
 		}
 
 		// Parse "served" query parameter
@@ -312,7 +312,7 @@ func ServeOrder(client db.IMongoClient) gin.HandlerFunc {
 	}
 }
 
-// CompleteOrder marks an order as complete
+// CloseOrder marks an order as complete
 //
 // @Summary Mark an order as complete
 // @Description Allows admin and cashier roles to mark an order as complete
@@ -323,7 +323,7 @@ func ServeOrder(client db.IMongoClient) gin.HandlerFunc {
 // @Failure 404  "Order not found"
 // @Failure 500  "Internal Server Error"
 // @Router /order/complete/{id} [patch]
-func CompleteOrder(client db.IMongoClient) gin.HandlerFunc {
+func CloseOrder(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		idParam := c.Param("id")
 		if idParam == "" {
@@ -334,7 +334,11 @@ func CompleteOrder(client db.IMongoClient) gin.HandlerFunc {
 		}
 
 		id, _ := primitive.ObjectIDFromHex(idParam)
-		filter := bson.D{{Key: "_id", Value: id}}
+		// Filters by id and checks if its served
+		filter := bson.D{
+			{Key: "_id", Value: id},
+			{Key: "servedAt", Value: bson.M{"$exists": true}},
+		}
 
 		update := bson.D{
 			{Key: "$set", Value: bson.D{
@@ -357,12 +361,12 @@ func CompleteOrder(client db.IMongoClient) gin.HandlerFunc {
 
 		// Check if a document was actually updated
 		if result.MatchedCount == 0 {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Order not found."})
+			c.JSON(http.StatusNotFound, gin.H{"error": "Order not found or must be served first"})
 			return
 		}
 
 		c.JSON(http.StatusOK, gin.H{
-			"message": "Complete status updated successfuly",
+			"message": "Order closed succesfully",
 		})
 	}
 }
