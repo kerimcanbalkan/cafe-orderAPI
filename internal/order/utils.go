@@ -2,6 +2,7 @@ package order
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -26,4 +27,19 @@ func validateOrder(v *validator.Validate, order Order) error {
 		}
 	}
 	return nil
+}
+
+func convertTableNumber(s string) (uint8, error) {
+	// Convert string to an integer
+	value, err := strconv.Atoi(s)
+	if err != nil {
+		return 0, err
+	}
+
+	// Ensure it's within the uint8 range (0-255)
+	if value < 0 || value > 255 {
+		return 0, fmt.Errorf("value %d out of range for uint8", value)
+	}
+
+	return uint8(value), nil
 }

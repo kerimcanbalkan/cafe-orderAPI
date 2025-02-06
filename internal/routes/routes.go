@@ -10,6 +10,7 @@ import (
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/db"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/menu"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/order"
+	"github.com/kerimcanbalkan/cafe-orderAPI/internal/sse"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/user"
 )
 
@@ -73,4 +74,6 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 		userGroup.POST("/login", user.Login(client))
 		userGroup.DELETE("/:id", auth.Authenticate([]string{"admin"}), user.DeleteUser(client))
 	}
+
+	r.GET("/api/v1/events", sse.SseHandler)
 }
