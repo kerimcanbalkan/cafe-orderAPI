@@ -7,7 +7,7 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-func validateOrder(v *validator.Validate, order Order) error {
+func validateOrder(v *validator.Validate, order orderRequest) error {
 	// Perform validation
 	if err := v.Struct(order); err != nil {
 

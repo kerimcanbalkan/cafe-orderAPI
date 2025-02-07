@@ -37,11 +37,12 @@ func TestGetOrders(t *testing.T) {
 				},
 			},
 			TotalPrice:  10.99,
-			TableNumber: 5,
+			TableNumber: uint8(5),
 			ClosedAt:    nil,
 			ServedAt:    nil,
 			CreatedAt:   time.Now(),
 			HandledBy:   primitive.NewObjectID(),
+			ClosedBy:    primitive.NewObjectID(),
 		}
 
 		order2 := order.Order{
@@ -57,11 +58,12 @@ func TestGetOrders(t *testing.T) {
 				},
 			},
 			TotalPrice:  12.50,
-			TableNumber: 3,
+			TableNumber: uint8(8),
 			ClosedAt:    nil,
 			ServedAt:    nil,
 			CreatedAt:   time.Now(),
 			HandledBy:   primitive.NewObjectID(),
+			ClosedBy:    primitive.NewObjectID(),
 		}
 
 		// Create the first cursor response with key-value BSON pairs
@@ -74,6 +76,7 @@ func TestGetOrders(t *testing.T) {
 			{Key: "servedAt", Value: order1.ServedAt},
 			{Key: "createdAt", Value: order1.CreatedAt},
 			{Key: "handledBy", Value: order1.HandledBy},
+			{Key: "closedBy", Value: order1.ClosedBy},
 		})
 
 		// Create the second cursor response with key-value BSON pairs
@@ -86,6 +89,7 @@ func TestGetOrders(t *testing.T) {
 			{Key: "servedAt", Value: order2.ServedAt},
 			{Key: "createdAt", Value: order2.CreatedAt},
 			{Key: "handledBy", Value: order2.HandledBy},
+			{Key: "closedBy", Value: order2.ClosedBy},
 		})
 
 		// Simulate cursor close
@@ -111,7 +115,7 @@ func TestGetOrders(t *testing.T) {
 		assert.Equal(t, 200, w.Code)
 		assert.Len(t, orderResponse.Data, 2)
 		assert.Equal(t, 10.99, orderResponse.Data[0].TotalPrice)
-		assert.Equal(t, 3, orderResponse.Data[1].TableNumber)
+		assert.Equal(t, uint8(8), orderResponse.Data[1].TableNumber)
 		assert.Equal(t, "Pasta", orderResponse.Data[1].Items[0].Name)
 	})
 }
@@ -190,14 +194,16 @@ func TestOrderValidation(t *testing.T) {
 }
 
 func TestUpdateOrder(t *testing.T) {
-	o := []menu.MenuItem{
-		{
-			ID:          primitive.NewObjectID(),
-			Name:        "Pizza",
-			Description: "Cheese pizza",
-			Price:       10.99,
-			Category:    "Food",
-			Img:         "pizza.jpg",
+	o := order.Order{
+		Items: []menu.MenuItem{
+			{
+				ID:          primitive.NewObjectID(),
+				Name:        "Pizza",
+				Description: "Cheese pizza",
+				Price:       10.99,
+				Category:    "Food",
+				Img:         "pizza.jpg",
+			},
 		},
 	}
 	mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
@@ -215,7 +221,7 @@ func TestUpdateOrder(t *testing.T) {
 
 		r := gin.Default()
 		r.PATCH("/test/order/:id", order.UpdateOrder(mockClient))
-		id := o[0].ID.Hex()
+		id := o.Items[0].ID.Hex()
 
 		body, _ := json.Marshal(o)
 		w := httptest.NewRecorder()
@@ -245,7 +251,7 @@ func TestUpdateOrder(t *testing.T) {
 
 		r := gin.Default()
 		r.PATCH("/test/order/:id", order.UpdateOrder(mockClient))
-		id := o[0].ID.Hex()
+		id := o.Items[0].ID.Hex()
 
 		body, _ := json.Marshal(o)
 		w := httptest.NewRecorder()

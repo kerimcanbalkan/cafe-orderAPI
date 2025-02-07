@@ -17,4 +17,5 @@ type Order struct {
 	CreatedAt   time.Time          `bson:"createdAt"           json:"createdAt"`
 	HandledBy   primitive.ObjectID `bson:"handledBy,omitempty" json:"handledBy"`
 	ClosedAt    *time.Time         `bson:"closedAt,omitempty"  json:"closedAt"`
+	ClosedBy    primitive.ObjectID `bson:"closedBy,omitempty"  json:"closedBy"`
 }
