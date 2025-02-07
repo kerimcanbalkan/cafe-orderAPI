@@ -22,13 +22,17 @@ import (
 
 var validate = validator.New()
 
+type orderRequest struct {
+	Items []menu.MenuItem `json:"items" validate:"required"`
+}
+
 // CreateOrder creates an order and saves it in the database
 //
 // @Summary Create a new order
 // @Description Creates a new order for a specific table and saves it in the database
 // @Tags order
 // @Param table path int true "Table number"
-// @Param order body Order true "Order details"
+// @Param order body orderRequest true "Order details"
 // @Success 200 {object} map[string]interface{} "Order created successfully"
 // @Failure 400  "Invalid request"
 // @Failure 500  "Internal Server Error"
@@ -43,17 +47,17 @@ func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 			})
 			return
 		}
-		var order Order
+		var request orderRequest
 
 		// Bind the request body to the order struct
-		if err = c.ShouldBindJSON(&order); err != nil {
+		if err = c.ShouldBindJSON(&request); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "Invalid request body",
 			})
 			return
 		}
 
-		if len(order.Items) == 0 {
+		if len(request.Items) == 0 {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "Order should include items",
 			})
@@ -63,7 +67,7 @@ func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 		totalPrice := float64(0)
 
 		// Validate Items
-		for _, item := range order.Items {
+		for _, item := range request.Items {
 			if err = menu.ValidateMenu(validate, item); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
 					"error": fmt.Sprintf(
@@ -78,16 +82,20 @@ func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 		}
 
 		// Validate the struct
-		if err = validateOrder(validate, order); err != nil {
+		if err = validateOrder(validate, request); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
+		order := &Order{}
+
+		order.Items = request.Items
 		order.TableNumber = uint8(table)
 		order.ClosedAt = nil
 		order.CreatedAt = time.Now()
 		order.ServedAt = nil
 		order.HandledBy = primitive.NilObjectID
+		order.ClosedBy = primitive.NilObjectID
 		order.TotalPrice = totalPrice
 
 		// Get the collection
@@ -380,7 +388,7 @@ func CloseOrder(client db.IMongoClient) gin.HandlerFunc {
 // @Description Allows admin, cashier, and waiter roles to update an order
 // @Tags order
 // @Param id path string true "Order ID"
-// @Param order body []menu.MenuItem true "Order update details"
+// @Param order body orderRequest true "Order update details"
 // @Security bearerToken
 // @Success 200 {object} map[string]interface{} "Order updated successfully"
 // @Failure 400  "Invalid request"
@@ -400,10 +408,10 @@ func UpdateOrder(client db.IMongoClient) gin.HandlerFunc {
 		id, _ := primitive.ObjectIDFromHex(idParam)
 		filter := bson.D{{Key: "_id", Value: id}}
 
-		var orderItems []menu.MenuItem
+		var request orderRequest
 
 		// Bind the request body to the order struct
-		if err := c.ShouldBindJSON(&orderItems); err != nil {
+		if err := c.ShouldBindJSON(&request); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "Invalid request body",
 			})
@@ -413,7 +421,7 @@ func UpdateOrder(client db.IMongoClient) gin.HandlerFunc {
 		totalPrice := float64(0)
 
 		// Validate Items
-		for _, item := range orderItems {
+		for _, item := range request.Items {
 			if err := menu.ValidateMenu(validate, item); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
 					"error": fmt.Sprintf(
@@ -429,7 +437,7 @@ func UpdateOrder(client db.IMongoClient) gin.HandlerFunc {
 
 		update := bson.D{
 			{Key: "$set", Value: bson.D{
-				{Key: "items", Value: orderItems},
+				{Key: "items", Value: request.Items},
 				{Key: "totalPrice", Value: totalPrice},
 			}},
 		}
