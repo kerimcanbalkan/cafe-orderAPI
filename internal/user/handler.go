@@ -1,6 +1,7 @@
 package user
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -18,6 +19,18 @@ import (
 )
 
 var validate = validator.New()
+
+// For excluding sensetive data
+type userResponse struct {
+	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	Name      string             `bson:"name"          json:"name"      validate:"required,min=3,max=20"`
+	Surname   string             `bson:"surname"       json:"surname"   validate:"required,min=3,max=20"`
+	Gender    string             `bson:"gender"        json:"gender"    validate:"required,oneof=male female"`
+	Email     string             `bson:"email"         json:"email"     validate:"required,email"`
+	Username  string             `bson:"username"      json:"username"  validate:"required,min=3,max=20"`
+	Role      string             `bson:"role"          json:"role"      validate:"required,oneof=admin cashier waiter"`
+	CreatedAt time.Time          `bson:"created_at"    json:"createdAt"`
+}
 
 // CreateUser creates a new user and saves it to the database
 //
@@ -99,7 +112,7 @@ func CreateUser(client db.IMongoClient) gin.HandlerFunc {
 // @Router /user [get]
 func GetUsers(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var users []User
+		var users []userResponse
 
 		// Get the collection from the database
 		collection := client.GetCollection(config.Env.DatabaseName, "users")
@@ -128,7 +141,7 @@ func GetUsers(client db.IMongoClient) gin.HandlerFunc {
 			return
 		}
 
-		// Return the menu in the response
+		// Return the user in the response
 		c.JSON(http.StatusOK, gin.H{
 			"data": users,
 		})
@@ -262,5 +275,93 @@ func DeleteUser(client db.IMongoClient) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, nil)
+	}
+}
+
+func GetUserById(client db.IMongoClient) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id := c.Param("id")
+		if id == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid ID!",
+			})
+			return
+		}
+
+		docID, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid ID!",
+			})
+			return
+		}
+
+		// Get claims from Gin context
+		claims, exists := c.Get("claims")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+
+		// Type assert to jwt.MapClaims
+		jwtClaims, ok := claims.(jwt.MapClaims)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid token data"})
+			return
+		}
+
+		// Extract UserID
+		userIDHex, ok := jwtClaims["UserID"].(string)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
+			return
+		}
+
+		// Convert the string back to primitive.ObjectID
+		clientID, err := primitive.ObjectIDFromHex(userIDHex)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid ObjectID"})
+			return
+		}
+
+		// Extract role from jwt
+		role, ok := jwtClaims["Role"].(string)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid Role"})
+			return
+		}
+
+		// Get collection from db
+		collection := client.GetCollection(config.Env.DatabaseName, "users")
+
+		// Get context from the request
+		ctx := c.Request.Context()
+
+		// Delete user from database
+		result := collection.FindOne(ctx, bson.D{{Key: "_id", Value: docID}})
+
+		var user userResponse
+		err = result.Decode(&user)
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+				return
+			}
+			utils.HandleMongoError(c, err)
+			return
+		}
+		fmt.Println(role)
+
+		if clientID != user.ID && role != "admin" {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "Unauthorized",
+			})
+			return
+		}
+
+		// Return the user in the response
+		c.JSON(http.StatusOK, gin.H{
+			"data": user,
+		})
 	}
 }
