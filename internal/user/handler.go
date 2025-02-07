@@ -98,8 +98,19 @@ func CreateUser(client db.IMongoClient) gin.HandlerFunc {
 // @Failure 500  "Internal Server Error"
 // @Router /user [get]
 func GetUsers(client db.IMongoClient) gin.HandlerFunc {
+	type userResponse struct {
+		ID        primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+		Name      string             `bson:"name"          json:"name"      validate:"required,min=3,max=20"`
+		Surname   string             `bson:"surname"       json:"surname"   validate:"required,min=3,max=20"`
+		Gender    string             `bson:"gender"        json:"gender"    validate:"required,oneof=male female"`
+		Email     string             `bson:"email"         json:"email"     validate:"required,email"`
+		Username  string             `bson:"username"      json:"username"  validate:"required,min=3,max=20"`
+		Role      string             `bson:"role"          json:"role"      validate:"required,oneof=admin cashier waiter"`
+		CreatedAt time.Time          `bson:"created_at"    json:"createdAt"`
+	}
+
 	return func(c *gin.Context) {
-		var users []User
+		var users []userResponse
 
 		// Get the collection from the database
 		collection := client.GetCollection(config.Env.DatabaseName, "users")
