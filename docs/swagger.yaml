@@ -3,11 +3,11 @@ definitions:
   menu.MenuItem:
     properties:
       category:
-        maxLength: 100
+        maxLength: 60
         minLength: 2
         type: string
       description:
-        maxLength: 500
+        maxLength: 150
         minLength: 5
         type: string
       id:
@@ -15,7 +15,7 @@ definitions:
       image:
         type: string
       name:
-        maxLength: 100
+        maxLength: 60
         minLength: 2
         type: string
       price:
@@ -29,14 +29,16 @@ definitions:
     type: object
   order.Order:
     properties:
+      closedAt:
+        type: string
+      closedBy:
+        type: string
       createdAt:
         type: string
       handledBy:
         type: string
       id:
         type: string
-      isClosed:
-        type: boolean
       items:
         items:
           $ref: '#/definitions/menu.MenuItem'
@@ -49,6 +51,22 @@ definitions:
         type: number
     required:
     - items
+    type: object
+  order.orderRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/menu.MenuItem'
+        type: array
+    required:
+    - items
+    type: object
+  user.LoginBody:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
     type: object
   user.User:
     properties:
@@ -65,7 +83,7 @@ definitions:
         type: string
       name:
         maxLength: 20
-        minLength: 2
+        minLength: 3
         type: string
       password:
         maxLength: 20
@@ -79,11 +97,11 @@ definitions:
         type: string
       surname:
         maxLength: 20
-        minLength: 2
+        minLength: 3
         type: string
       username:
         maxLength: 20
-        minLength: 2
+        minLength: 3
         type: string
     required:
     - email
@@ -93,13 +111,6 @@ definitions:
     - role
     - surname
     - username
-    type: object
-  user.loginBody:
-    properties:
-      password:
-        type: string
-      username:
-        type: string
     type: object
 host: localhost:8000
 info:
@@ -112,6 +123,19 @@ info:
   title: Cafe Order API
   version: "1"
 paths:
+  /events:
+    get:
+      description: Establishes an SSE connection to receive real-time updates.
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: SSE stream opened
+          schema:
+            type: string
+      summary: Handle SSE connection
+      tags:
+      - SSE
   /menu:
     get:
       description: Fetches the entire menu from the database
@@ -271,7 +295,7 @@ paths:
         name: order
         required: true
         schema:
-          $ref: '#/definitions/order.Order'
+          $ref: '#/definitions/order.orderRequest'
       responses:
         "200":
           description: Order updated successfully
@@ -303,7 +327,7 @@ paths:
         name: order
         required: true
         schema:
-          $ref: '#/definitions/order.Order'
+          $ref: '#/definitions/order.orderRequest'
       responses:
         "200":
           description: Order created successfully
@@ -365,6 +389,48 @@ paths:
       summary: Mark an order as served
       tags:
       - order
+  /order/stats/monthly:
+    get:
+      consumes:
+      - application/json
+      description: Fetches order statistics for a given year and month. If no year
+        or month is provided, the current year and month are used as defaults.
+      parameters:
+      - description: Year in YYYY format (defaults to current year)
+        example: "2025"
+        in: query
+        name: year
+        type: string
+      - description: Month in M format (1-12, defaults to current month)
+        example: "1"
+        in: query
+        name: month
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Monthly statistics data
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid month/year format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to fetch statistics
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - bearerToken: []
+      summary: Get monthly statistics
+      tags:
+      - Statistics
   /user:
     get:
       description: Allows admin role to retrieve a list of all users
@@ -437,7 +503,7 @@ paths:
         name: loginBody
         required: true
         schema:
-          $ref: '#/definitions/user.loginBody'
+          $ref: '#/definitions/user.LoginBody'
       responses:
         "200":
           description: JWT token and expiration time
