@@ -389,6 +389,43 @@ paths:
       summary: Mark an order as served
       tags:
       - order
+  /order/stats/daily:
+    get:
+      consumes:
+      - application/json
+      description: Fetches statistics for a specific day, including orders placed
+        between 00:00:00 and 23:59:59 of that day.
+      parameters:
+      - description: 'The date for which to fetch the statistics (format: yyyy-mm-dd).
+          Defaults to today''s date if not provided.'
+        in: query
+        name: date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Daily statistics data
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid date format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to fetch statistics
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - bearerToken: []
+      summary: Get daily statistics for a given day
+      tags:
+      - Statistics
   /order/stats/monthly:
     get:
       consumes:
@@ -429,6 +466,43 @@ paths:
       security:
       - bearerToken: []
       summary: Get monthly statistics
+      tags:
+      - Statistics
+  /order/stats/yearly:
+    get:
+      consumes:
+      - application/json
+      description: Fetches order statistics for a given year. If no year is provided,
+        the current year is used as default.
+      parameters:
+      - description: Year in YYYY format (defaults to current year)
+        example: "2025"
+        in: query
+        name: year
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Yearly statistics data
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid year format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to fetch statistics
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - bearerToken: []
+      summary: Get yearly statistics
       tags:
       - Statistics
   /user:
