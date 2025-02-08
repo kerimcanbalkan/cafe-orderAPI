@@ -497,7 +497,93 @@ func GetMonthlyStatistics(client db.IMongoClient) gin.HandlerFunc {
 
 		collection := client.GetCollection(config.Env.DatabaseName, "orders")
 
-		stats, err := monthlyStats(startDate, endDate, c, collection)
+		stats, err := getStats(startDate, endDate, c, collection)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch statistics"})
+			return
+		}
+
+		// Return the stats in the response
+		c.JSON(http.StatusOK, gin.H{
+			"data": stats,
+		})
+	}
+}
+
+// GetYearlyStatistics retrieves yearly order statistics.
+//
+// @Summary Get yearly statistics
+// @Description Fetches order statistics for a given year. If no year is provided, the current year is used as default.
+// @Tags Statistics
+// @Security bearerToken
+// @Accept json
+// @Produce json
+// @Param year query string false "Year in YYYY format (defaults to current year)" example(2025)
+// @Success 200 {object} map[string]interface{} "Yearly statistics data"
+// @Failure 400 {object} map[string]string "Invalid year format"
+// @Failure 500 {object} map[string]string "Failed to fetch statistics"
+// @Router /order/stats/yearly [get]
+func GetYearlyStatistics(client db.IMongoClient) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		yearStr := c.DefaultQuery("year", time.Now().Format("2006"))
+
+		yearInt, err := strconv.Atoi(yearStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid year format"})
+			return
+		}
+
+		// Set the start date to January 1st of the given year
+		startDate := time.Date(yearInt, time.January, 1, 0, 0, 0, 0, time.UTC)
+
+		// Set the end date to December 31st of the given year at 23:59:59
+		endDate := time.Date(yearInt, time.December, 31, 23, 59, 59, 999999999, time.UTC)
+
+		collection := client.GetCollection(config.Env.DatabaseName, "orders")
+
+		stats, err := getStats(startDate, endDate, c, collection)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch statistics"})
+			return
+		}
+
+		// Return the stats in the response
+		c.JSON(http.StatusOK, gin.H{
+			"data": stats,
+		})
+	}
+}
+
+// GetDailyStatistics godoc
+// @Summary Get daily statistics for a given day
+// @Description Fetches statistics for a specific day, including orders placed between 00:00:00 and 23:59:59 of that day.
+// @Tags Statistics
+// @Security bearerToken
+// @Accept json
+// @Produce json
+// @Param date query string false "The date for which to fetch the statistics (format: yyyy-mm-dd). Defaults to today's date if not provided."
+// @Success 200 {object} map[string]interface{} "Daily statistics data"
+// @Failure 400 {object} map[string]string "Invalid date format"
+// @Failure 500 {object} map[string]string "Failed to fetch statistics"
+// @Router /order/stats/daily [get]
+func GetDailyStatistics(client db.IMongoClient) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		dayStr := c.DefaultQuery("date", time.Now().Format("2006-01-02"))
+
+		day, err := time.Parse("2006-01-02", dayStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid date format"})
+			return
+		}
+
+		// Set the start time to the beginning of the given day (00:00:00)
+		startDate := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, time.UTC)
+
+		// Set the end time to the end of the given day (23:59:59.999999999)
+		endDate := time.Date(day.Year(), day.Month(), day.Day(), 23, 59, 59, 999999999, time.UTC)
+		collection := client.GetCollection(config.Env.DatabaseName, "orders")
+
+		stats, err := getStats(startDate, endDate, c, collection)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch statistics"})
 			return

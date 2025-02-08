@@ -17,7 +17,7 @@ type OrderStats struct {
 }
 
 // monthlyStats calculates order statistics for a given date range.
-func monthlyStats(
+func getStats(
 	startDate, endDate time.Time,
 	ctx context.Context,
 	collection *mongo.Collection,
