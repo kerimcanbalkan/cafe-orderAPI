@@ -45,11 +45,6 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 	{
 		orderGroup.POST("/:table", order.CreateOrder(client))
 		orderGroup.GET(
-			"/stats/monthly",
-			auth.Authenticate([]string{"admin"}),
-			order.GetMonthlyStatistics(client),
-		)
-		orderGroup.GET(
 			"",
 			auth.Authenticate([]string{"admin", "cashier", "waiter"}),
 			order.GetOrders(client),
@@ -69,6 +64,22 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 			auth.Authenticate([]string{"admin", "cashier"}),
 			order.CloseOrder(client),
 		)
+		orderGroup.GET(
+			"/stats/monthly",
+			auth.Authenticate([]string{"admin"}),
+			order.GetMonthlyStatistics(client),
+		)
+		orderGroup.GET(
+			"/stats/yearly",
+			auth.Authenticate([]string{"admin"}),
+			order.GetYearlyStatistics(client),
+		)
+		orderGroup.GET(
+			"/stats/daily",
+			auth.Authenticate([]string{"admin"}),
+			order.GetDailyStatistics(client),
+		)
+
 	}
 
 	// User Routes
