@@ -2,8 +2,8 @@ package routes
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/swaggo/files"
-	"github.com/swaggo/gin-swagger"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 
 	_ "github.com/kerimcanbalkan/cafe-orderAPI/docs"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/auth"
@@ -44,6 +44,11 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 	orderGroup := r.Group("/api/v1/order")
 	{
 		orderGroup.POST("/:table", order.CreateOrder(client))
+		orderGroup.GET(
+			"/stats/monthly",
+			auth.Authenticate([]string{"admin"}),
+			order.GetMonthlyStatistics(client),
+		)
 		orderGroup.GET(
 			"",
 			auth.Authenticate([]string{"admin", "cashier", "waiter"}),

@@ -19,6 +19,26 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/events": {
+            "get": {
+                "description": "Establishes an SSE connection to receive real-time updates.",
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "SSE"
+                ],
+                "summary": "Handle SSE connection",
+                "responses": {
+                    "200": {
+                        "description": "SSE stream opened",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/menu": {
             "get": {
                 "description": "Fetches the entire menu from the database",
@@ -314,6 +334,69 @@ const docTemplate = `{
                 }
             }
         },
+        "/order/stats/monthly": {
+            "get": {
+                "security": [
+                    {
+                        "bearerToken": []
+                    }
+                ],
+                "description": "Fetches order statistics for a given year and month. If no year or month is provided, the current year and month are used as defaults.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Statistics"
+                ],
+                "summary": "Get monthly statistics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "2025",
+                        "description": "Year in YYYY format (defaults to current year)",
+                        "name": "year",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "1",
+                        "description": "Month in M format (1-12, defaults to current month)",
+                        "name": "month",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Monthly statistics data",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid month/year format",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch statistics",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/order/{id}": {
             "patch": {
                 "security": [
@@ -340,7 +423,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/order.Order"
+                            "$ref": "#/definitions/order.orderRequest"
                         }
                     }
                 ],
@@ -385,7 +468,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/order.Order"
+                            "$ref": "#/definitions/order.orderRequest"
                         }
                     }
                 ],
@@ -484,7 +567,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/user.loginBody"
+                            "$ref": "#/definitions/user.LoginBody"
                         }
                     }
                 ],
@@ -559,12 +642,12 @@ const docTemplate = `{
             "properties": {
                 "category": {
                     "type": "string",
-                    "maxLength": 100,
+                    "maxLength": 60,
                     "minLength": 2
                 },
                 "description": {
                     "type": "string",
-                    "maxLength": 500,
+                    "maxLength": 150,
                     "minLength": 5
                 },
                 "id": {
@@ -575,7 +658,7 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string",
-                    "maxLength": 100,
+                    "maxLength": 60,
                     "minLength": 2
                 },
                 "price": {
@@ -589,6 +672,12 @@ const docTemplate = `{
                 "items"
             ],
             "properties": {
+                "closedAt": {
+                    "type": "string"
+                },
+                "closedBy": {
+                    "type": "string"
+                },
                 "createdAt": {
                     "type": "string"
                 },
@@ -597,9 +686,6 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "string"
-                },
-                "isClosed": {
-                    "type": "boolean"
                 },
                 "items": {
                     "type": "array",
@@ -615,6 +701,31 @@ const docTemplate = `{
                 },
                 "totalPrice": {
                     "type": "number"
+                }
+            }
+        },
+        "order.orderRequest": {
+            "type": "object",
+            "required": [
+                "items"
+            ],
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/menu.MenuItem"
+                    }
+                }
+            }
+        },
+        "user.LoginBody": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
                 }
             }
         },
@@ -649,7 +760,7 @@ const docTemplate = `{
                 "name": {
                     "type": "string",
                     "maxLength": 20,
-                    "minLength": 2
+                    "minLength": 3
                 },
                 "password": {
                     "type": "string",
@@ -667,23 +778,12 @@ const docTemplate = `{
                 "surname": {
                     "type": "string",
                     "maxLength": 20,
-                    "minLength": 2
+                    "minLength": 3
                 },
                 "username": {
                     "type": "string",
                     "maxLength": 20,
-                    "minLength": 2
-                }
-            }
-        },
-        "user.loginBody": {
-            "type": "object",
-            "properties": {
-                "password": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
+                    "minLength": 3
                 }
             }
         }

@@ -230,7 +230,7 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 			return
 		}
 
-		// Return the menu in the response
+		// Return the orders in the response
 		c.JSON(http.StatusOK, gin.H{
 			"data": orders,
 		})
@@ -462,6 +462,50 @@ func UpdateOrder(client db.IMongoClient) gin.HandlerFunc {
 		}
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Order updated succesfully",
+		})
+	}
+}
+
+// GetMonthlyStatistics retrieves monthly order statistics.
+//
+// @Summary Get monthly statistics
+// @Description Fetches order statistics for a given year and month. If no year or month is provided, the current year and month are used as defaults.
+// @Tags Statistics
+// @Security bearerToken
+// @Accept json
+// @Produce json
+// @Param year query string false "Year in YYYY format (defaults to current year)" example(2025)
+// @Param month query string false "Month in M format (1-12, defaults to current month)" example(1)
+// @Success 200 {object} map[string]interface{} "Monthly statistics data"
+// @Failure 400 {object} map[string]string "Invalid month/year format"
+// @Failure 500 {object} map[string]string "Failed to fetch statistics"
+// @Router /order/stats/monthly [get]
+func GetMonthlyStatistics(client db.IMongoClient) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		yearStr := c.DefaultQuery("year", time.Now().Format("2006"))
+		monthStr := c.DefaultQuery("month", time.Now().Format("1"))
+
+		yearInt, err := strconv.Atoi(yearStr)
+		monthInt, err := strconv.Atoi(monthStr)
+		if err != nil || monthInt < 1 || monthInt > 12 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid month/year format"})
+			return
+		}
+
+		startDate := time.Date(yearInt, time.Month(monthInt), 1, 0, 0, 0, 0, time.UTC)
+		endDate := startDate.AddDate(0, 1, 0)
+
+		collection := client.GetCollection(config.Env.DatabaseName, "orders")
+
+		stats, err := monthlyStats(startDate, endDate, c, collection)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch statistics"})
+			return
+		}
+
+		// Return the stats in the response
+		c.JSON(http.StatusOK, gin.H{
+			"data": stats,
 		})
 	}
 }

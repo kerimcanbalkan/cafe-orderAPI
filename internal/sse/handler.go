@@ -13,7 +13,14 @@ var (
 	mutex   = sync.Mutex{}
 )
 
-// Handle SSE connection
+// SseHandler handles Server-Sent Events (SSE) connections.
+//
+// @Summary Handle SSE connection
+// @Description Establishes an SSE connection to receive real-time updates.
+// @Tags SSE
+// @Produce text/event-stream
+// @Success 200 {string} string "SSE stream opened"
+// @Router /events [get]
 func SseHandler(c *gin.Context) {
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
 	c.Writer.Header().Set("Cache-Control", "no-cache")

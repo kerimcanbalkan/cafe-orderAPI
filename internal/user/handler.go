@@ -158,7 +158,7 @@ type LoginBody struct {
 // @Summary User login
 // @Description Allows users to log in by providing username and password
 // @Tags user
-// @Param loginBody body loginBody true "Login details"
+// @Param loginBody body LoginBody true "Login details"
 // @Success 200 {object} map[string]interface{} "JWT token and expiration time"
 // @Failure 400  "Invalid request"
 // @Failure 401 "Unauthorized"
