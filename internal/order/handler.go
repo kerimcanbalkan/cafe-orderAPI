@@ -344,7 +344,36 @@ func CloseOrder(client db.IMongoClient) gin.HandlerFunc {
 			return
 		}
 
+		// Convert parameter ID
 		id, _ := primitive.ObjectIDFromHex(idParam)
+
+		// Get claims from Gin context
+		claims, exists := c.Get("claims")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+
+		// Type assert to jwt.MapClaims
+		jwtClaims, ok := claims.(jwt.MapClaims)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid token data"})
+			return
+		}
+
+		// Extract UserID
+		userIDHex, ok := jwtClaims["UserID"].(string)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
+			return
+		}
+		// Convert the string back to primitive.ObjectID
+		userID, err := primitive.ObjectIDFromHex(userIDHex)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid ObjectID"})
+			return
+		}
+
 		// Filters by id and checks if its served
 		filter := bson.D{
 			{Key: "_id", Value: id},
@@ -354,6 +383,7 @@ func CloseOrder(client db.IMongoClient) gin.HandlerFunc {
 		update := bson.D{
 			{Key: "$set", Value: bson.D{
 				{Key: "closedAt", Value: time.Now()},
+				{Key: "closedBy", Value: userID},
 			}},
 		}
 

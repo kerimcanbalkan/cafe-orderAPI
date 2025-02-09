@@ -16,7 +16,7 @@ type OrderStats struct {
 	AverageOrderValue float64 `bson:"average_order_value" json:"averageOrderValue"`
 }
 
-// monthlyStats calculates order statistics for a given date range.
+// getStats calculates order statistics for a given date range.
 func getStats(
 	startDate, endDate time.Time,
 	ctx context.Context,
