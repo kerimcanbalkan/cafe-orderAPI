@@ -88,6 +88,11 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 		userGroup.POST("", auth.Authenticate([]string{"admin"}), user.CreateUser(client))
 		userGroup.GET("", auth.Authenticate([]string{"admin"}), user.GetUsers(client))
 		userGroup.GET(
+			":id/stats/yearly",
+			auth.Authenticate([]string{"admin", "waiter", "cashier"}),
+			user.GetYearlyStatistics(client),
+		)
+		userGroup.GET(
 			":id",
 			auth.Authenticate([]string{"admin", "waiter", "cashier"}),
 			user.GetUserById(client),
