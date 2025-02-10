@@ -24,6 +24,7 @@ func getStats(
 ) (OrderStats, error) {
 	matchFilter := bson.M{
 		"createdAt": bson.M{"$gte": startDate, "$lt": endDate},
+		"closedAt":  bson.M{"$exists": true},
 	}
 
 	pipeline := mongo.Pipeline{

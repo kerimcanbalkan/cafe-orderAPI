@@ -389,23 +389,27 @@ paths:
       summary: Mark an order as served
       tags:
       - order
-  /order/stats/daily:
+  /order/stats:
     get:
       consumes:
       - application/json
-      description: Fetches statistics for a specific day, including orders placed
-        between 00:00:00 and 23:59:59 of that day.
+      description: Fetches statistics for a specific date range.
       parameters:
       - description: 'The date for which to fetch the statistics (format: yyyy-mm-dd).
           Defaults to today''s date if not provided.'
         in: query
-        name: date
+        name: from
+        type: string
+      - description: 'The date for which to fetch the statistics (format: yyyy-mm-dd).
+          Defaults to today''s date if not provided.'
+        in: query
+        name: to
         type: string
       produces:
       - application/json
       responses:
         "200":
-          description: Daily statistics data
+          description: Order statistics data
           schema:
             additionalProperties: true
             type: object
@@ -423,86 +427,7 @@ paths:
             type: object
       security:
       - bearerToken: []
-      summary: Get daily statistics for a given day
-      tags:
-      - Statistics
-  /order/stats/monthly:
-    get:
-      consumes:
-      - application/json
-      description: Fetches order statistics for a given year and month. If no year
-        or month is provided, the current year and month are used as defaults.
-      parameters:
-      - description: Year in YYYY format (defaults to current year)
-        example: "2025"
-        in: query
-        name: year
-        type: string
-      - description: Month in M format (1-12, defaults to current month)
-        example: "1"
-        in: query
-        name: month
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Monthly statistics data
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid month/year format
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Failed to fetch statistics
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - bearerToken: []
-      summary: Get monthly statistics
-      tags:
-      - Statistics
-  /order/stats/yearly:
-    get:
-      consumes:
-      - application/json
-      description: Fetches order statistics for a given year. If no year is provided,
-        the current year is used as default.
-      parameters:
-      - description: Year in YYYY format (defaults to current year)
-        example: "2025"
-        in: query
-        name: year
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Yearly statistics data
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid year format
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Failed to fetch statistics
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - bearerToken: []
-      summary: Get yearly statistics
+      summary: Get statistics for a given date range.
       tags:
       - Statistics
   /user:
@@ -591,6 +516,63 @@ paths:
         "500":
           description: Internal Server Error
       summary: User login
+      tags:
+      - user
+  /users/{id}/stats:
+    get:
+      consumes:
+      - application/json
+      description: Allows admins to retrieve all user statistics. Regular users can
+        only retrieve their own statistics.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Start date (YYYY-MM-DD). Defaults to today.
+        in: query
+        name: from
+        type: string
+      - description: End date (YYYY-MM-DD). Defaults to today.
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Statistics data
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - bearerToken: []
+      summary: Get user statistics for a given date range
       tags:
       - user
 securityDefinitions:

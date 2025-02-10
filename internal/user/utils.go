@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
@@ -93,4 +96,50 @@ func SeedAdminUser(client *db.MongoClient, ctx context.Context) {
 		panic("Failed to seed admin user: " + err.Error())
 	}
 	log.Println("Admin user created successfully!")
+}
+
+func AuthSameUserOrAdmin(
+	requestID primitive.ObjectID,
+	c *gin.Context,
+) bool {
+	// Get claims from Gin context
+	claims, exists := c.Get("claims")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return false
+	}
+
+	// Type assert to jwt.MapClaims
+	jwtClaims, ok := claims.(jwt.MapClaims)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid token data"})
+		return false
+	}
+
+	// Extract UserID
+	userIDHex, ok := jwtClaims["UserID"].(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
+		return false
+	}
+
+	// Convert the string back to primitive.ObjectID
+	clientID, err := primitive.ObjectIDFromHex(userIDHex)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid ObjectID"})
+		return false
+	}
+
+	// Extract role from jwt
+	role, ok := jwtClaims["Role"].(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid Role"})
+		return false
+	}
+
+	if role == "admin" {
+		return true
+	}
+
+	return clientID == requestID
 }
