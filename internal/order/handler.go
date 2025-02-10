@@ -508,7 +508,7 @@ func UpdateOrder(client db.IMongoClient) gin.HandlerFunc {
 // @Success 200 {object} map[string]interface{} "Order statistics data"
 // @Failure 400 {object} map[string]string "Invalid date format"
 // @Failure 500 {object} map[string]string "Failed to fetch statistics"
-// @Router /order/stats/daily [get]
+// @Router /order/stats [get]
 func GetStatistics(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		collection := client.GetCollection(config.Env.DatabaseName, "orders")

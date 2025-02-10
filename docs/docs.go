@@ -334,14 +334,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/order/stats/daily": {
+        "/order/stats": {
             "get": {
                 "security": [
                     {
                         "bearerToken": []
                     }
                 ],
-                "description": "Fetches statistics for a specific day, including orders placed between 00:00:00 and 23:59:59 of that day.",
+                "description": "Fetches statistics for a specific date range.",
                 "consumes": [
                     "application/json"
                 ],
@@ -351,18 +351,24 @@ const docTemplate = `{
                 "tags": [
                     "Statistics"
                 ],
-                "summary": "Get daily statistics for a given day",
+                "summary": "Get statistics for a given date range.",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "The date for which to fetch the statistics (format: yyyy-mm-dd). Defaults to today's date if not provided.",
-                        "name": "date",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "The date for which to fetch the statistics (format: yyyy-mm-dd). Defaults to today's date if not provided.",
+                        "name": "to",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Daily statistics data",
+                        "description": "Order statistics data",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -370,125 +376,6 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Invalid date format",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to fetch statistics",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/order/stats/monthly": {
-            "get": {
-                "security": [
-                    {
-                        "bearerToken": []
-                    }
-                ],
-                "description": "Fetches order statistics for a given year and month. If no year or month is provided, the current year and month are used as defaults.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Statistics"
-                ],
-                "summary": "Get monthly statistics",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "example": "2025",
-                        "description": "Year in YYYY format (defaults to current year)",
-                        "name": "year",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "example": "1",
-                        "description": "Month in M format (1-12, defaults to current month)",
-                        "name": "month",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Monthly statistics data",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid month/year format",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to fetch statistics",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/order/stats/yearly": {
-            "get": {
-                "security": [
-                    {
-                        "bearerToken": []
-                    }
-                ],
-                "description": "Fetches order statistics for a given year. If no year is provided, the current year is used as default.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Statistics"
-                ],
-                "summary": "Get yearly statistics",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "example": "2025",
-                        "description": "Year in YYYY format (defaults to current year)",
-                        "name": "year",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Yearly statistics data",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid year format",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -735,6 +622,92 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/users/{id}/stats": {
+            "get": {
+                "security": [
+                    {
+                        "bearerToken": []
+                    }
+                ],
+                "description": "Allows admins to retrieve all user statistics. Regular users can only retrieve their own statistics.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Get user statistics for a given date range",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD). Defaults to today.",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD). Defaults to today.",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Statistics data",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             }
