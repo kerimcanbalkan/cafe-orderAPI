@@ -1,9 +1,7 @@
 package user
 
 import (
-	"log"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -279,6 +277,19 @@ func DeleteUser(client db.IMongoClient) gin.HandlerFunc {
 	}
 }
 
+// GetUserById retrieves User data for given user
+// @Summary Get user data for a given ID
+// @Description Allows admins to retrieve all user data. Regular users can only retrieve their own data.
+// @Tags user
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Security bearerToken
+// @Success 200 {object} map[string]interface{} "User data"
+// @Failure 400 {object} map[string]string "Invalid ID!"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 404 {object} map[string]string "User not found"
+// @Failure 500 {object} map[string]string "Internal server error"
 func GetUserById(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
@@ -297,38 +308,10 @@ func GetUserById(client db.IMongoClient) gin.HandlerFunc {
 			return
 		}
 
-		// Get claims from Gin context
-		claims, exists := c.Get("claims")
-		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-			return
-		}
-
-		// Type assert to jwt.MapClaims
-		jwtClaims, ok := claims.(jwt.MapClaims)
-		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid token data"})
-			return
-		}
-
-		// Extract UserID
-		userIDHex, ok := jwtClaims["UserID"].(string)
-		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
-			return
-		}
-
-		// Convert the string back to primitive.ObjectID
-		clientID, err := primitive.ObjectIDFromHex(userIDHex)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid ObjectID"})
-			return
-		}
-
-		// Extract role from jwt
-		role, ok := jwtClaims["Role"].(string)
-		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid Role"})
+		if !AuthSameUserOrAdmin(docID, c) {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "Unauthorized.",
+			})
 			return
 		}
 
@@ -352,13 +335,6 @@ func GetUserById(client db.IMongoClient) gin.HandlerFunc {
 			return
 		}
 
-		if clientID != user.ID && role != "admin" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Unauthorized",
-			})
-			return
-		}
-
 		// Return the user in the response
 		c.JSON(http.StatusOK, gin.H{
 			"data": user,
@@ -366,7 +342,24 @@ func GetUserById(client db.IMongoClient) gin.HandlerFunc {
 	}
 }
 
-func GetYearlyStatistics(client db.IMongoClient) gin.HandlerFunc {
+// GetStatistics calculates and returns role-based user statistics for a given date range.
+//
+// @Summary Get user statistics for a given date range
+// @Description Allows admins to retrieve all user statistics. Regular users can only retrieve their own statistics.
+// @Tags user
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Param from query string false "Start date (YYYY-MM-DD). Defaults to today."
+// @Param to query string false "End date (YYYY-MM-DD). Defaults to today."
+// @Security bearerToken
+// @Success 200 {object} map[string]interface{} "Statistics data"
+// @Failure 400 {object} map[string]string "Invalid input"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 404 {object} map[string]string "User not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /users/{id}/stats [get]
+func GetStatistics(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 		if id == "" {
@@ -384,38 +377,10 @@ func GetYearlyStatistics(client db.IMongoClient) gin.HandlerFunc {
 			return
 		}
 
-		// Get claims from Gin context
-		claims, exists := c.Get("claims")
-		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-			return
-		}
-
-		// Type assert to jwt.MapClaims
-		jwtClaims, ok := claims.(jwt.MapClaims)
-		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid token data"})
-			return
-		}
-
-		// Extract UserID
-		userIDHex, ok := jwtClaims["UserID"].(string)
-		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
-			return
-		}
-
-		// Convert the string back to primitive.ObjectID
-		clientID, err := primitive.ObjectIDFromHex(userIDHex)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid ObjectID"})
-			return
-		}
-
-		// Extract role from jwt
-		role, ok := jwtClaims["Role"].(string)
-		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid Role"})
+		if !AuthSameUserOrAdmin(docID, c) {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "Unauthorized.",
+			})
 			return
 		}
 
@@ -439,54 +404,47 @@ func GetYearlyStatistics(client db.IMongoClient) gin.HandlerFunc {
 			return
 		}
 
-		if clientID != user.ID && role != "admin" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Unauthorized",
-			})
-			return
-		}
+		// Get date range from query params, defaulting to the current day
+		now := time.Now()
+		fromStr := c.DefaultQuery("from", now.Format("2006-01-02"))
+		toStr := c.DefaultQuery("to", now.Format("2006-01-02"))
 
-		yearStr := c.DefaultQuery("year", time.Now().Format("2006"))
-
-		yearInt, err := strconv.Atoi(yearStr)
+		from, err := time.Parse("2006-01-02", fromStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid year format"})
+			c.JSON(
+				http.StatusBadRequest,
+				gin.H{"error": "Invalid 'from' date format use YYYY-MM-DD"},
+			)
 			return
 		}
 
-		// Set the start date to January 1st of the given year
-		startDate := time.Date(yearInt, time.January, 1, 0, 0, 0, 0, time.UTC)
+		to, err := time.Parse("2006-01-02", toStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid 'to' date format YYYY-MM-DD"})
+			return
+		}
 
-		// Set the end date to December 31st of the given year at 23:59:59
-		endDate := time.Date(yearInt, time.December, 31, 23, 59, 59, 999999999, time.UTC)
+		// Ensure 'to' date includes the full day (23:59:59)
+		to = to.Add(
+			23*time.Hour + 59*time.Minute + 59*time.Second,
+		) // Set the start date to January 1st of the given year
 
 		collection = client.GetCollection(config.Env.DatabaseName, "orders")
 
 		var stats interface{}
 
 		if user.Role == "waiter" {
-			log.Println(
-				"Fetching waiter stats for:",
-				user.ID,
-			) // Add this log to check execution flow
-			stats, err = getWaiterStats(startDate, endDate, c, collection, user.ID)
-			log.Println("THIS IS THE STATS RETURN", stats)
+			stats, err = getWaiterStats(from, to, c, collection, user.ID)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch statistics"})
 				return
 			}
 		} else if user.Role == "cashier" {
-			log.Println(
-				"Fetching cashier stats for:",
-				user.ID,
-			) // Add this log to check execution flow
-
-			stats, err = getCashierStats(startDate, endDate, c, collection, user.ID)
+			stats, err = getCashierStats(from, to, c, collection, user.ID)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch statistics"})
 				return
 			}
-
 		}
 
 		// Return the stats in the response
