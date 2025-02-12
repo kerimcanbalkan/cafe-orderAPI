@@ -297,6 +297,12 @@ func ServeOrder(client db.IMongoClient) gin.HandlerFunc {
 		collection := client.GetCollection(config.Env.DatabaseName, "orders")
 		ctx := c.Request.Context()
 
+		// Filters by id and checks if its not already been served
+		filter := bson.D{
+			{Key: "_id", Value: id},
+			{Key: "servedAt", Value: bson.M{"$exists": false}},
+		}
+
 		// Prepare the update statement
 		update := bson.D{
 			{Key: "$set", Value: bson.D{
@@ -306,13 +312,16 @@ func ServeOrder(client db.IMongoClient) gin.HandlerFunc {
 		}
 
 		// Find order and if exists update
-		result := collection.FindOneAndUpdate(ctx, bson.D{{Key: "_id", Value: id}}, update)
+		result := collection.FindOneAndUpdate(ctx, filter, update)
 
 		var order Order
 		err = result.Decode(&order)
 		if err != nil {
 			if err == mongo.ErrNoDocuments {
-				c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
+				c.JSON(
+					http.StatusNotFound,
+					gin.H{"error": "Wrong order ID or Order already served."},
+				)
 				return
 			}
 			utils.HandleMongoError(c, err)
