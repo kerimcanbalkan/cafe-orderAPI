@@ -219,6 +219,7 @@ func Login(client db.IMongoClient) gin.HandlerFunc {
 		c.JSON(http.StatusOK, gin.H{
 			"token":      token,
 			"expires_in": 30 * 24 * 60 * 60, // 30 days
+			"role":       user.Role,
 		})
 	}
 }
