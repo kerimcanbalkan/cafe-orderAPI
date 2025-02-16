@@ -70,26 +70,26 @@ func TestGetOrders(t *testing.T) {
 		first := mtest.CreateCursorResponse(1, "testDB.orders", mtest.FirstBatch, bson.D{
 			{Key: "_id", Value: order1.ID},
 			{Key: "items", Value: order1.Items},
-			{Key: "totalPrice", Value: order1.TotalPrice},
-			{Key: "tableNumber", Value: order1.TableNumber},
-			{Key: "closedAt", Value: order1.ClosedAt},
-			{Key: "servedAt", Value: order1.ServedAt},
-			{Key: "createdAt", Value: order1.CreatedAt},
-			{Key: "handledBy", Value: order1.HandledBy},
-			{Key: "closedBy", Value: order1.ClosedBy},
+			{Key: "total_price", Value: order1.TotalPrice},
+			{Key: "table_number", Value: order1.TableNumber},
+			{Key: "closed_at", Value: order1.ClosedAt},
+			{Key: "served_at", Value: order1.ServedAt},
+			{Key: "created_at", Value: order1.CreatedAt},
+			{Key: "handled_ay", Value: order1.HandledBy},
+			{Key: "closed_by", Value: order1.ClosedBy},
 		})
 
 		// Create the second cursor response with key-value BSON pairs
 		second := mtest.CreateCursorResponse(1, "testDB.orders", mtest.NextBatch, bson.D{
 			{Key: "_id", Value: order2.ID},
 			{Key: "items", Value: order2.Items},
-			{Key: "totalPrice", Value: order2.TotalPrice},
-			{Key: "tableNumber", Value: order2.TableNumber},
-			{Key: "closedAt", Value: order2.ClosedAt},
-			{Key: "servedAt", Value: order2.ServedAt},
-			{Key: "createdAt", Value: order2.CreatedAt},
-			{Key: "handledBy", Value: order2.HandledBy},
-			{Key: "closedBy", Value: order2.ClosedBy},
+			{Key: "total_price", Value: order2.TotalPrice},
+			{Key: "table_number", Value: order2.TableNumber},
+			{Key: "closed_at", Value: order2.ClosedAt},
+			{Key: "served_at", Value: order2.ServedAt},
+			{Key: "created_at", Value: order2.CreatedAt},
+			{Key: "handled_by", Value: order2.HandledBy},
+			{Key: "closed_by", Value: order2.ClosedBy},
 		})
 
 		// Simulate cursor close
