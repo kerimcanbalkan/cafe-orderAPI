@@ -119,8 +119,30 @@ func GetUsers(client db.IMongoClient) gin.HandlerFunc {
 		// Get context from the request
 		ctx := c.Request.Context()
 
+		role := c.Query("role")
+		gender := c.Query("gender")
+
+		query := bson.D{}
+
+		if role != "" {
+			if role != "cashier" && role != "waiter" && role != "admin" {
+				c.JSON(
+					http.StatusBadRequest,
+					gin.H{"error": "Invalid role. Use cashier, waiter or admin"},
+				)
+				return
+			}
+			query = append(query, bson.E{Key: "role", Value: role})
+		}
+
+		if gender != "" {
+			if gender != "male" && gender != "female" {
+				query = append(query, bson.E{Key: "gender", Value: role})
+			}
+		}
+
 		// Find all documents in the menu collection
-		cursor, err := collection.Find(ctx, bson.D{})
+		cursor, err := collection.Find(ctx, query)
 		if err != nil {
 			if err == mongo.ErrNoDocuments {
 				c.JSON(http.StatusNotFound, gin.H{
