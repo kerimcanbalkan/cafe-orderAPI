@@ -162,7 +162,7 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 				)
 				return
 			}
-			query = append(query, bson.E{Key: "closedAt", Value: bson.M{"$exists": bool}})
+			query = append(query, bson.E{Key: "closed_at", Value: bson.M{"$exists": bool}})
 		}
 
 		// Parse "served" query parameter
@@ -175,7 +175,7 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 				)
 				return
 			}
-			query = append(query, bson.E{Key: "servedAt", Value: bson.M{"$exists": bool}})
+			query = append(query, bson.E{Key: "served_at", Value: bson.M{"$exists": bool}})
 		}
 
 		// Add table filter
@@ -188,7 +188,7 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 				)
 				return
 			}
-			query = append(query, bson.E{Key: "tableNumber", Value: table})
+			query = append(query, bson.E{Key: "table_number", Value: table})
 		}
 
 		// Parse "date" query parameter
@@ -206,7 +206,7 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 			startOfDay := primitive.NewDateTimeFromTime(parsedDate)
 			endOfDay := primitive.NewDateTimeFromTime(parsedDate.Add(24 * time.Hour))
 			query = append(query, bson.E{
-				Key: "createdAt",
+				Key: "created_at",
 				Value: bson.D{
 					{Key: "$gte", Value: startOfDay},
 					{Key: "$lt", Value: endOfDay},
@@ -300,14 +300,14 @@ func ServeOrder(client db.IMongoClient) gin.HandlerFunc {
 		// Filters by id and checks if its not already been served
 		filter := bson.D{
 			{Key: "_id", Value: id},
-			{Key: "servedAt", Value: bson.M{"$exists": false}},
+			{Key: "served_at", Value: bson.M{"$exists": false}},
 		}
 
 		// Prepare the update statement
 		update := bson.D{
 			{Key: "$set", Value: bson.D{
-				{Key: "servedAt", Value: time.Now()},
-				{Key: "handledBy", Value: userID},
+				{Key: "served_at", Value: time.Now()},
+				{Key: "handled_by", Value: userID},
 			}},
 		}
 
@@ -386,13 +386,13 @@ func CloseOrder(client db.IMongoClient) gin.HandlerFunc {
 		// Filters by id and checks if its served
 		filter := bson.D{
 			{Key: "_id", Value: id},
-			{Key: "servedAt", Value: bson.M{"$exists": true}},
+			{Key: "served_at", Value: bson.M{"$exists": true}},
 		}
 
 		update := bson.D{
 			{Key: "$set", Value: bson.D{
-				{Key: "closedAt", Value: time.Now()},
-				{Key: "closedBy", Value: userID},
+				{Key: "closed_at", Value: time.Now()},
+				{Key: "closed_by", Value: userID},
 			}},
 		}
 
@@ -477,7 +477,7 @@ func UpdateOrder(client db.IMongoClient) gin.HandlerFunc {
 		update := bson.D{
 			{Key: "$set", Value: bson.D{
 				{Key: "items", Value: request.Items},
-				{Key: "totalPrice", Value: totalPrice},
+				{Key: "total_price", Value: totalPrice},
 			}},
 		}
 

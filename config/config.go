@@ -18,9 +18,9 @@ type Config struct {
 
 func LoadConfig() *Config {
 	config := &Config{
-		DatabaseURI:          getEnv("MONGO_URI", "mongodb://localhost:27017"),
+		DatabaseURI:          getEnv("MONGO_URI", "mongodb://localhost:2717"),
 		DatabaseName:         getEnv("MONGO_DB_NAME", "mongodb"),
-		ServerPort:           getEnv("SERVER_PORT", "8080"),
+		ServerPort:           getEnv("SERVER_PORT", "8000"),
 		DefaultAdminUsername: getEnv("DEFAULT_ADMIN_USERNAME", "admin"),
 		DefaultAdminPassword: getEnv("DEFAULT_ADMIN_PASSWORD", "password"),
 		Secret:               getEnv("SECRET", "reallysecuresecret"),

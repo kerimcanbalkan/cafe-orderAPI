@@ -23,8 +23,8 @@ func getStats(
 	collection *mongo.Collection,
 ) (OrderStats, error) {
 	matchFilter := bson.M{
-		"createdAt": bson.M{"$gte": startDate, "$lt": endDate},
-		"closedAt":  bson.M{"$exists": true},
+		"created_at": bson.M{"$gte": startDate, "$lt": endDate},
+		"closed_at":  bson.M{"$exists": true},
 	}
 
 	pipeline := mongo.Pipeline{
@@ -33,8 +33,8 @@ func getStats(
 			{Key: "$group", Value: bson.M{
 				"_id":                 nil,
 				"total_orders":        bson.M{"$sum": 1},
-				"total_revenue":       bson.M{"$sum": "$totalPrice"},
-				"average_order_value": bson.M{"$avg": "$totalPrice"},
+				"total_revenue":       bson.M{"$sum": "$total_price"},
+				"average_order_value": bson.M{"$avg": "$total_price"},
 			}},
 		},
 	}
