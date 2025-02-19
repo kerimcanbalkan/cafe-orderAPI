@@ -119,8 +119,30 @@ func GetUsers(client db.IMongoClient) gin.HandlerFunc {
 		// Get context from the request
 		ctx := c.Request.Context()
 
+		role := c.Query("role")
+		gender := c.Query("gender")
+
+		query := bson.D{}
+
+		if role != "" {
+			if role != "cashier" && role != "waiter" && role != "admin" {
+				c.JSON(
+					http.StatusBadRequest,
+					gin.H{"error": "Invalid role. Use cashier, waiter or admin"},
+				)
+				return
+			}
+			query = append(query, bson.E{Key: "role", Value: role})
+		}
+
+		if gender != "" {
+			if gender != "male" && gender != "female" {
+				query = append(query, bson.E{Key: "gender", Value: role})
+			}
+		}
+
 		// Find all documents in the menu collection
-		cursor, err := collection.Find(ctx, bson.D{})
+		cursor, err := collection.Find(ctx, query)
 		if err != nil {
 			if err == mongo.ErrNoDocuments {
 				c.JSON(http.StatusNotFound, gin.H{
@@ -203,7 +225,7 @@ func Login(client db.IMongoClient) gin.HandlerFunc {
 		claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 			"UserID":    user.ID,
 			"Role":      user.Role,
-			"ExpiresAt": time.Now().Add(time.Hour * 24 * 30).Unix(),
+			"ExpiresAt": time.Now().Add(time.Hour * 10).Unix(), // 10 hours
 		})
 
 		// Sign and get the complete encoded token as a string using the secret
@@ -218,7 +240,7 @@ func Login(client db.IMongoClient) gin.HandlerFunc {
 		// Return the token in a JSON response
 		c.JSON(http.StatusOK, gin.H{
 			"token":      token,
-			"expires_in": 30 * 24 * 60 * 60, // 30 days
+			"expires_in": 10 * 60 * 60, // 10 hours
 			"role":       user.Role,
 		})
 	}
