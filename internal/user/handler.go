@@ -225,7 +225,7 @@ func Login(client db.IMongoClient) gin.HandlerFunc {
 		claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 			"UserID":    user.ID,
 			"Role":      user.Role,
-			"ExpiresAt": time.Now().Add(time.Hour * 24 * 30).Unix(),
+			"ExpiresAt": time.Now().Add(time.Hour * 10).Unix(), // 10 hours
 		})
 
 		// Sign and get the complete encoded token as a string using the secret
@@ -240,7 +240,7 @@ func Login(client db.IMongoClient) gin.HandlerFunc {
 		// Return the token in a JSON response
 		c.JSON(http.StatusOK, gin.H{
 			"token":      token,
-			"expires_in": 30 * 24 * 60 * 60, // 30 days
+			"expires_in": 10 * 60 * 60, // 10 hours
 		})
 	}
 }
