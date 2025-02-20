@@ -365,6 +365,74 @@ func GetUserById(client db.IMongoClient) gin.HandlerFunc {
 	}
 }
 
+// GetUserMe retrieves the User data of the user making the request
+// @Summary Get user data
+// @Description Allows users to get their own user information
+// @Tags user
+// @Accept json
+// @Produce json
+// @Security bearerToken
+// @Success 200 {object} map[string]interface{} "User data"
+// @Failure 400 {object} map[string]string "Invalid ID!"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 404 {object} map[string]string "User not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+func GetUserMe(client db.IMongoClient) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get claims from Gin context
+		claims, exists := c.Get("claims")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+
+		// Type assert to jwt.MapClaims
+		jwtClaims, ok := claims.(jwt.MapClaims)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid token data"})
+			return
+		}
+
+		// Extract UserID
+		userIDHex, ok := jwtClaims["UserID"].(string)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
+			return
+		}
+		// Convert the string back to primitive.ObjectID
+		userID, err := primitive.ObjectIDFromHex(userIDHex)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid ObjectID"})
+			return
+		}
+
+		// Get collection from db
+		collection := client.GetCollection(config.Env.DatabaseName, "users")
+
+		// Get context from the request
+		ctx := c.Request.Context()
+
+		// Delete user from database
+		result := collection.FindOne(ctx, bson.D{{Key: "_id", Value: userID}})
+
+		var user userResponse
+		err = result.Decode(&user)
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+				return
+			}
+			utils.HandleMongoError(c, err)
+			return
+		}
+
+		// Return the user in the response
+		c.JSON(http.StatusOK, gin.H{
+			"data": user,
+		})
+	}
+}
+
 // GetStatistics calculates and returns role-based user statistics for a given date range.
 //
 // @Summary Get user statistics for a given date range
