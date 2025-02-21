@@ -36,7 +36,12 @@ type userResponse struct {
 // @Summary Create a new user
 // @Description Allows admin role to create a new user
 // @Tags user
-// @Param user body User true "User details"
+// @Param name formData string true "Name of the user"
+// @Param surname formData string true "Surname of the user"
+// @Param gender formData string true "Gender of the user"
+// @Param role formData string true "Role of the user (waiter, cashier, admin)"
+// @Param email formData string true "Email of the user"
+// @Param password formData true "Password of the user"
 // @Security bearerToken
 // @Success 200 {object} map[string]interface{} "User created successfully"
 // @Failure 400 "Invalid request"
@@ -46,13 +51,21 @@ func CreateUser(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var user User
 
-		if err := c.ShouldBindJSON(&user); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Invalid request body",
-			})
-			return
+		name := c.PostForm("name")
+		surname := c.PostForm("surname")
+		gender := c.PostForm("gender")
+		email := c.PostForm("email")
+		username := c.PostForm("username")
+		role := c.PostForm("role")
+		password := c.PostForm("password")
 
-		}
+		user.Name = name
+		user.Surname = surname
+		user.Gender = gender
+		user.Email = email
+		user.Username = username
+		user.Role = role
+		user.Password = password
 
 		hash, err := bcrypt.GenerateFromPassword([]byte(user.Password), 10)
 		if err != nil {
