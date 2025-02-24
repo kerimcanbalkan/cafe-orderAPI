@@ -41,7 +41,7 @@ type userResponse struct {
 // @Param gender formData string true "Gender of the user"
 // @Param role formData string true "Role of the user (waiter, cashier, admin)"
 // @Param email formData string true "Email of the user"
-// @Param password formData true "Password of the user"
+// @Param password formData string true "Password of the user"
 // @Security bearerToken
 // @Success 200 {object} map[string]interface{} "User created successfully"
 // @Failure 400 "Invalid request"

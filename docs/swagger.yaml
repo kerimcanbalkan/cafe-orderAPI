@@ -68,50 +68,6 @@ definitions:
       username:
         type: string
     type: object
-  user.User:
-    properties:
-      createdAt:
-        type: string
-      email:
-        type: string
-      gender:
-        enum:
-        - male
-        - female
-        type: string
-      id:
-        type: string
-      name:
-        maxLength: 20
-        minLength: 3
-        type: string
-      password:
-        maxLength: 20
-        minLength: 8
-        type: string
-      role:
-        enum:
-        - admin
-        - cashier
-        - waiter
-        type: string
-      surname:
-        maxLength: 20
-        minLength: 3
-        type: string
-      username:
-        maxLength: 20
-        minLength: 3
-        type: string
-    required:
-    - email
-    - gender
-    - name
-    - password
-    - role
-    - surname
-    - username
-    type: object
 host: localhost:8000
 info:
   contact:
@@ -449,12 +405,36 @@ paths:
     post:
       description: Allows admin role to create a new user
       parameters:
-      - description: User details
-        in: body
-        name: user
+      - description: Name of the user
+        in: formData
+        name: name
         required: true
-        schema:
-          $ref: '#/definitions/user.User'
+        type: string
+      - description: Surname of the user
+        in: formData
+        name: surname
+        required: true
+        type: string
+      - description: Gender of the user
+        in: formData
+        name: gender
+        required: true
+        type: string
+      - description: Role of the user (waiter, cashier, admin)
+        in: formData
+        name: role
+        required: true
+        type: string
+      - description: Email of the user
+        in: formData
+        name: email
+        required: true
+        type: string
+      - description: Password of the user
+        in: formData
+        name: password
+        required: true
+        type: string
       responses:
         "200":
           description: User created successfully
