@@ -123,6 +123,7 @@ func CreateMenuItem(client db.IMongoClient) gin.HandlerFunc {
 
 		// Convert price to float
 		priceFloat, err := strconv.ParseFloat(price, 32)
+		priceFloat = roundFloat(priceFloat)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid price format"})
 			return
