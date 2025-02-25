@@ -28,9 +28,6 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 	// Documentation
 	r.GET("api/v1//swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// Serving Images
-	r.GET("api/v1/images/:filename", menu.GetMenuItemImage)
-
 	// Menu Routes
 	menuGroup := r.Group("/api/v1/menu")
 	{
@@ -78,12 +75,12 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 		userGroup.POST("", auth.Authenticate([]string{"admin"}), user.CreateUser(client))
 		userGroup.GET("", auth.Authenticate([]string{"admin"}), user.GetUsers(client))
 		userGroup.GET(
-			":id/stats",
+			"/:id/stats",
 			auth.Authenticate([]string{"admin", "waiter", "cashier"}),
 			user.GetStatistics(client),
 		)
 		userGroup.GET(
-			":id",
+			"/:id",
 			auth.Authenticate([]string{"admin", "waiter", "cashier"}),
 			user.GetUserById(client),
 		)

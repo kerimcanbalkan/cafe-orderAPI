@@ -129,13 +129,15 @@ func CreateMenuItem(client db.IMongoClient) gin.HandlerFunc {
 			return
 		}
 
+		img := filepath.Base(imagePath)
+
 		// Create a new menu item
 		item := MenuItem{
 			Name:        name,
 			Description: description,
 			Price:       float64(priceFloat),
 			Category:    category,
-			Img:         imagePath,
+			Img:         img,
 		}
 
 		// Validate the struct
