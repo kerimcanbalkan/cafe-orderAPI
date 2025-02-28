@@ -35,7 +35,6 @@ go mod tidy
 ```
 
 ### Configure Environment Variables
-
 ```
 MONGO_URI=mongodb://localhost:27017
 MONGO_DB_NAME=mongodb
