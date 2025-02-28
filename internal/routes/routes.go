@@ -93,5 +93,5 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 		userGroup.DELETE("/:id", auth.Authenticate([]string{"admin"}), user.DeleteUser(client))
 	}
 
-	r.GET("/api/v1/events", sse.SseHandler)
+	r.GET("/api/v1/events", auth.Authenticate([]string{"admin,cashier,waiter"}), sse.SseHandler)
 }
