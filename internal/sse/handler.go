@@ -2,9 +2,8 @@ package sse
 
 import (
 	"fmt"
-	"sync"
-
 	"github.com/gin-gonic/gin"
+	"sync"
 )
 
 // Map to store SSE client connections

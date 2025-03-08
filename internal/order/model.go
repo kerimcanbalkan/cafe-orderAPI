@@ -8,9 +8,14 @@ import (
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/menu"
 )
 
+type OrderItem struct {
+	MenuItem menu.MenuItem `bson:"menu_item" json:"menuItem"`
+	Quantity uint8         `bson:"quantity" json:"quantity" validate:"required"`
+}
+
 type Order struct {
 	ID          primitive.ObjectID `bson:"_id,omitempty"       json:"id"`
-	Items       []menu.MenuItem    `bson:"items"               json:"items"       validate:"required"`
+	Items       []OrderItem        `bson:"items"               json:"items"       validate:"required"`
 	TotalPrice  float64            `bson:"total_price"          json:"totalPrice"`
 	TableNumber uint8              `bson:"table_number"         json:"tableNumber"`
 	ServedAt    *time.Time         `bson:"served_at,omitempty"  json:"servedAt"`
