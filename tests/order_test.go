@@ -26,8 +26,8 @@ func TestGetOrders(t *testing.T) {
 		// Create sample Order and MenuItem instances
 		order1 := order.Order{
 			ID: primitive.NewObjectID(),
-			Items: []menu.MenuItem{
-				{
+			Items: []order.OrderItem{{
+				MenuItem: menu.MenuItem{
 					ID:          primitive.NewObjectID(),
 					Name:        "Pizza",
 					Description: "Cheese pizza",
@@ -35,7 +35,8 @@ func TestGetOrders(t *testing.T) {
 					Category:    "Food",
 					Img:         "pizza.jpg",
 				},
-			},
+				Quantity: 2,
+			}},
 			TotalPrice:  10.99,
 			TableNumber: uint8(5),
 			ClosedAt:    nil,
@@ -47,8 +48,8 @@ func TestGetOrders(t *testing.T) {
 
 		order2 := order.Order{
 			ID: primitive.NewObjectID(),
-			Items: []menu.MenuItem{
-				{
+			Items: []order.OrderItem{{
+				MenuItem: menu.MenuItem{
 					ID:          primitive.NewObjectID(),
 					Name:        "Pasta",
 					Description: "Spaghetti with tomato sauce",
@@ -56,7 +57,8 @@ func TestGetOrders(t *testing.T) {
 					Category:    "Food",
 					Img:         "pasta.jpg",
 				},
-			},
+				Quantity: 1,
+			}},
 			TotalPrice:  12.50,
 			TableNumber: uint8(8),
 			ClosedAt:    nil,
@@ -116,7 +118,7 @@ func TestGetOrders(t *testing.T) {
 		assert.Len(t, orderResponse.Data, 2)
 		assert.Equal(t, 10.99, orderResponse.Data[0].TotalPrice)
 		assert.Equal(t, uint8(8), orderResponse.Data[1].TableNumber)
-		assert.Equal(t, "Pasta", orderResponse.Data[1].Items[0].Name)
+		assert.Equal(t, "Pasta", orderResponse.Data[1].Items[0].MenuItem.Name)
 	})
 }
 
@@ -124,8 +126,8 @@ func TestCreateOrder(t *testing.T) {
 	mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
 
 	o := order.Order{
-		Items: []menu.MenuItem{
-			{
+		Items: []order.OrderItem{{
+			MenuItem: menu.MenuItem{
 				ID:          primitive.NewObjectID(),
 				Name:        "Pizza",
 				Description: "Cheese pizza",
@@ -133,8 +135,9 @@ func TestCreateOrder(t *testing.T) {
 				Category:    "Food",
 				Img:         "pizza.jpg",
 			},
+			Quantity: 3,
 		},
-	}
+		}}
 
 	mt.Run("success", func(mt *mtest.T) {
 		body, _ := json.Marshal(o)
@@ -168,7 +171,7 @@ func TestOrderValidation(t *testing.T) {
 
 	mt.Run("custom error validation", func(mt *mtest.T) {
 		o := order.Order{
-			Items: []menu.MenuItem{},
+			Items: []order.OrderItem{},
 		}
 		mockClient := db.NewMockMongoClient(mt.Coll)
 
@@ -195,8 +198,8 @@ func TestOrderValidation(t *testing.T) {
 
 func TestUpdateOrder(t *testing.T) {
 	o := order.Order{
-		Items: []menu.MenuItem{
-			{
+		Items: []order.OrderItem{{
+			MenuItem: menu.MenuItem{
 				ID:          primitive.NewObjectID(),
 				Name:        "Pizza",
 				Description: "Cheese pizza",
@@ -204,8 +207,9 @@ func TestUpdateOrder(t *testing.T) {
 				Category:    "Food",
 				Img:         "pizza.jpg",
 			},
+			Quantity: 3,
 		},
-	}
+		}}
 	mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
 
 	mt.Run("success", func(mt *mtest.T) {
@@ -221,7 +225,7 @@ func TestUpdateOrder(t *testing.T) {
 
 		r := gin.Default()
 		r.PATCH("/test/order/:id", order.UpdateOrder(mockClient))
-		id := o.Items[0].ID.Hex()
+		id := o.Items[0].MenuItem.ID.Hex()
 
 		body, _ := json.Marshal(o)
 		w := httptest.NewRecorder()
@@ -251,7 +255,7 @@ func TestUpdateOrder(t *testing.T) {
 
 		r := gin.Default()
 		r.PATCH("/test/order/:id", order.UpdateOrder(mockClient))
-		id := o.Items[0].ID.Hex()
+		id := o.Items[0].MenuItem.ID.Hex()
 
 		body, _ := json.Marshal(o)
 		w := httptest.NewRecorder()

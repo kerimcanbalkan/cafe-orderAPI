@@ -23,7 +23,7 @@ import (
 var validate = validator.New()
 
 type orderRequest struct {
-	Items []menu.MenuItem `json:"items" validate:"required"`
+	Items []OrderItem `json:"items" validate:"required"`
 }
 
 // CreateOrder creates an order and saves it in the database
@@ -67,18 +67,18 @@ func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 		totalPrice := float64(0)
 
 		// Validate Items
-		for _, item := range request.Items {
-			if err = menu.ValidateMenu(validate, item); err != nil {
+		for _, orderItem := range request.Items {
+			if err = menu.ValidateMenu(validate, orderItem.MenuItem); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
 					"error": fmt.Sprintf(
 						"Validation failed for item %s: %s",
-						item.Name,
+						orderItem.MenuItem.Name,
 						err.Error(),
 					),
 				})
 				return
 			}
-			totalPrice += item.Price
+			totalPrice += (orderItem.MenuItem.Price * float64(orderItem.Quantity))
 		}
 
 		// Validate the struct
@@ -460,18 +460,18 @@ func UpdateOrder(client db.IMongoClient) gin.HandlerFunc {
 		totalPrice := float64(0)
 
 		// Validate Items
-		for _, item := range request.Items {
-			if err := menu.ValidateMenu(validate, item); err != nil {
+		for _, orderItem := range request.Items {
+			if err := menu.ValidateMenu(validate, orderItem.MenuItem); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
 					"error": fmt.Sprintf(
 						"Validation failed for item %s: %s",
-						item.Name,
+						orderItem.MenuItem.Name,
 						err.Error(),
 					),
 				})
 				return
 			}
-			totalPrice += item.Price
+			totalPrice += (orderItem.MenuItem.Price * float64(orderItem.Quantity))
 		}
 
 		update := bson.D{
