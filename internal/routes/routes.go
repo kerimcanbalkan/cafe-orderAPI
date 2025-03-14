@@ -43,7 +43,6 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 		orderGroup.POST("/:table", order.CreateOrder(client))
 		orderGroup.GET(
 			"",
-			auth.Authenticate([]string{"admin", "cashier", "waiter"}),
 			order.GetOrders(client),
 		)
 		orderGroup.PATCH(
