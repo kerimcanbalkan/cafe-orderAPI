@@ -41,7 +41,19 @@ func EnsureIndexes(client IMongoClient, ctx context.Context, dbName string) {
 
 	_, err = menuCollection.Indexes().CreateOne(ctx, menuIndexModels)
 	if err != nil {
-		log.Fatalf("Failed to create indexes for users: %v", err)
+		log.Fatalf("Failed to create indexes for menu: %v", err)
+	}
+
+	tableCollection := client.GetCollection(dbName, "tables")
+
+	tableIndexModels := mongo.IndexModel{
+		Keys: bson.D{{Key: "name", Value: 1}},
+		Options: options.Index().SetUnique(true),
+	}
+
+	_, err = tableCollection.Indexes().CreateOne(ctx, tableIndexModels)
+	if err != nil {
+		log.Fatalf("Failed to create indexes for tables: %v", err)
 	}
 
 	log.Println("Indexes ensured successfully!")
