@@ -38,7 +38,7 @@ func TestGetOrders(t *testing.T) {
 				Quantity: 2,
 			}},
 			TotalPrice:  10.99,
-			TableNumber: uint8(5),
+			TableID: primitive.NewObjectID(),
 			ClosedAt:    nil,
 			ServedAt:    nil,
 			CreatedAt:   time.Now(),
@@ -60,7 +60,7 @@ func TestGetOrders(t *testing.T) {
 				Quantity: 1,
 			}},
 			TotalPrice:  12.50,
-			TableNumber: uint8(8),
+			TableID: primitive.NewObjectID(),
 			ClosedAt:    nil,
 			ServedAt:    nil,
 			CreatedAt:   time.Now(),
@@ -73,7 +73,7 @@ func TestGetOrders(t *testing.T) {
 			{Key: "_id", Value: order1.ID},
 			{Key: "items", Value: order1.Items},
 			{Key: "total_price", Value: order1.TotalPrice},
-			{Key: "table_number", Value: order1.TableNumber},
+			{Key: "table_number", Value: order1.TableID},
 			{Key: "closed_at", Value: order1.ClosedAt},
 			{Key: "served_at", Value: order1.ServedAt},
 			{Key: "created_at", Value: order1.CreatedAt},
@@ -86,7 +86,7 @@ func TestGetOrders(t *testing.T) {
 			{Key: "_id", Value: order2.ID},
 			{Key: "items", Value: order2.Items},
 			{Key: "total_price", Value: order2.TotalPrice},
-			{Key: "table_number", Value: order2.TableNumber},
+			{Key: "table_number", Value: order2.TableID},
 			{Key: "closed_at", Value: order2.ClosedAt},
 			{Key: "served_at", Value: order2.ServedAt},
 			{Key: "created_at", Value: order2.CreatedAt},
@@ -117,7 +117,7 @@ func TestGetOrders(t *testing.T) {
 		assert.Equal(t, 200, w.Code)
 		assert.Len(t, orderResponse.Data, 2)
 		assert.Equal(t, 10.99, orderResponse.Data[0].TotalPrice)
-		assert.Equal(t, uint8(8), orderResponse.Data[1].TableNumber)
+		assert.Equal(t, uint8(8), orderResponse.Data[1].TableID)
 		assert.Equal(t, "Pasta", orderResponse.Data[1].Items[0].MenuItem.Name)
 	})
 }
@@ -150,8 +150,10 @@ func TestCreateOrder(t *testing.T) {
 		r := gin.Default()
 		r.POST("/test/order/:table", order.CreateOrder(mockClient))
 
+		tableID := primitive.NewObjectID()
+
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("POST", "/test/order/5", bytes.NewBuffer(body))
+		req, _ := http.NewRequest("POST", "/test/order/"+tableID.Hex(), bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 
 		r.ServeHTTP(w, req)
@@ -179,10 +181,11 @@ func TestOrderValidation(t *testing.T) {
 
 		r := gin.Default()
 		r.POST("/test/order/:table", order.CreateOrder(mockClient))
+		tableID := primitive.NewObjectID()
 
 		body, _ := json.Marshal(o)
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("POST", "/test/order/1", bytes.NewBuffer(body))
+		req, _ := http.NewRequest("POST", "/test/order/"+tableID.Hex(), bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 
 		r.ServeHTTP(w, req)
