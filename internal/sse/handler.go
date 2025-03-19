@@ -2,13 +2,14 @@ package sse
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"sync"
+
+	"github.com/gin-gonic/gin"
 )
 
 // Map to store SSE client connections
 var (
-	clients = make(map[chan uint8]bool)
+	clients = make(map[chan string]bool)
 	mutex   = sync.Mutex{}
 )
 
@@ -25,7 +26,7 @@ func SseHandler(c *gin.Context) {
 	c.Writer.Header().Set("Cache-Control", "no-cache")
 	c.Writer.Header().Set("Connection", "keep-alive")
 
-	messageChan := make(chan uint8)
+	messageChan := make(chan string)
 	mutex.Lock()
 	clients[messageChan] = true
 	mutex.Unlock()
@@ -34,7 +35,7 @@ func SseHandler(c *gin.Context) {
 	for {
 		select {
 		case msg := <-messageChan:
-			fmt.Fprintf(c.Writer, "data: %d\n\n", msg)
+			fmt.Fprintf(c.Writer, "data: %s\n\n", msg)
 			c.Writer.Flush()
 		case <-c.Writer.CloseNotify():
 			mutex.Lock()
@@ -47,7 +48,7 @@ func SseHandler(c *gin.Context) {
 }
 
 // Notify all connected clients
-func Notify(message uint8) {
+func Notify(message string) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	for client := range clients {

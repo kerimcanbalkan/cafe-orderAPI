@@ -39,18 +39,41 @@ type orderRequest struct {
 // @Router /order/{table} [post]
 func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		tableStr := c.Param("table")
-		table, err := convertTableNumber(tableStr)
-		if err != nil {
+		table := c.Param("tableID")
+
+		if table == "" {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Invalid table number",
+				"error": "Invalid Parameter",
 			})
 			return
 		}
+
+		
+		tableID, err := primitive.ObjectIDFromHex(table)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid Table ID",
+			})
+			return
+		}
+
+		ok, err := checkTable(tableID, c, client)
+                if err != nil {
+			utils.HandleMongoError(c, err)
+			return
+		}
+
+		if ok != true {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Table not found, Please provide a valid Table ID",
+			})
+			return
+		}
+		
 		var request orderRequest
 
 		// Bind the request body to the order struct
-		if err = c.ShouldBindJSON(&request); err != nil {
+		if err := c.ShouldBindJSON(&request); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "Invalid request body",
 			})
@@ -68,7 +91,7 @@ func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 
 		// Validate Items
 		for _, orderItem := range request.Items {
-			if err = menu.ValidateMenu(validate, orderItem.MenuItem); err != nil {
+			if err := menu.ValidateMenu(validate, orderItem.MenuItem); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
 					"error": fmt.Sprintf(
 						"Validation failed for item %s: %s",
@@ -82,7 +105,7 @@ func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 		}
 
 		// Validate the struct
-		if err = validateOrder(validate, request); err != nil {
+		if err := validateOrder(validate, request); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
@@ -90,7 +113,7 @@ func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 		order := &Order{}
 
 		order.Items = request.Items
-		order.TableNumber = uint8(table)
+		order.TableID = tableID;
 		order.ClosedAt = nil
 		order.CreatedAt = time.Now()
 		order.ServedAt = nil
@@ -146,7 +169,7 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 		// Get query parameters
 		isClosed := c.Query("is_closed")
 		served := c.Query("served")
-		table := c.Query("table")
+		table := c.Query("tableID")
 		date := c.Query("date")
 
 		// Build MongoDB query dynamically
@@ -180,15 +203,14 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 
 		// Add table filter
 		if table != "" {
-			table, err := strconv.Atoi(table)
+			tableID, err := primitive.ObjectIDFromHex(table)
 			if err != nil {
-				c.JSON(
-					http.StatusBadRequest,
-					gin.H{"error": "Invalid table number."},
-				)
+				c.JSON(http.StatusBadRequest, gin.H{
+					"error": "Invalid Table ID",
+				})
 				return
 			}
-			query = append(query, bson.E{Key: "table_number", Value: table})
+			query = append(query, bson.E{Key: "table", Value: tableID})
 		}
 
 		// Parse "date" query parameter

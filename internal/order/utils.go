@@ -2,9 +2,14 @@ package order
 
 import (
 	"fmt"
-	"strconv"
-
+	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/kerimcanbalkan/cafe-orderAPI/config"
+	"github.com/kerimcanbalkan/cafe-orderAPI/internal/db"
+	"github.com/kerimcanbalkan/cafe-orderAPI/internal/table"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func validateOrder(v *validator.Validate, order orderRequest) error {
@@ -29,17 +34,20 @@ func validateOrder(v *validator.Validate, order orderRequest) error {
 	return nil
 }
 
-func convertTableNumber(s string) (uint8, error) {
-	// Convert string to an integer
-	value, err := strconv.Atoi(s)
+func checkTable(tableID primitive.ObjectID, c *gin.Context, client db.IMongoClient) (bool, error) {
+	collection := client.GetCollection(config.Env.DatabaseName, "tables")
+	ctx := c.Request.Context()
+
+	result := collection.FindOne(ctx, bson.D{{Key: "_id", Value: tableID}})
+
+	var table table.Table
+	err := result.Decode(&table)
 	if err != nil {
-		return 0, err
+		if err == mongo.ErrNoDocuments {
+			return false, nil
+		}
+		return false, err
 	}
 
-	// Ensure it's within the uint8 range (0-255)
-	if value < 0 || value > 255 {
-		return 0, fmt.Errorf("value %d out of range for uint8", value)
-	}
-
-	return uint8(value), nil
+	return true, nil
 }

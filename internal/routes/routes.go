@@ -12,6 +12,7 @@ import (
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/order"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/sse"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/user"
+	"github.com/kerimcanbalkan/cafe-orderAPI/internal/table"
 )
 
 // SetupRoutes initializes and registers all API routes and middleware for the Gin engine.
@@ -40,7 +41,7 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 	// Order Routes
 	orderGroup := r.Group("/api/v1/order")
 	{
-		orderGroup.POST("/:table", order.CreateOrder(client))
+		orderGroup.POST("/:tableID", order.CreateOrder(client))
 		orderGroup.GET(
 			"",
 			order.GetOrders(client),
@@ -66,6 +67,12 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 			order.GetStatistics(client),
 		)
 
+	}
+
+	tableGroup := r.Group("/api/v1/table")
+	{
+		tableGroup.POST("", auth.Authenticate([]string{"admin"}), table.CreateTable(client))
+		tableGroup.GET("", auth.Authenticate([]string{"admin"}), table.GetTables(client))
 	}
 
 	// User Routes
