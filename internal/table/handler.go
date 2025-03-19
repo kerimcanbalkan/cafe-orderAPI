@@ -7,6 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/kerimcanbalkan/cafe-orderAPI/config"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/db"
@@ -104,6 +106,63 @@ func GetTables(client db.IMongoClient) gin.HandlerFunc {
 		// Return the menu in the response
 		c.JSON(http.StatusOK, gin.H{
 			"data": tables,
+		})
+	}
+}
+
+// GetTableById retrieves Table data for given table ID
+// @Summary Get table data for a given ID
+// @Description Allows users to get table data by the ID
+// @Tags table
+// @Accept json
+// @Produce json
+// @Param id path string true "Table ID"
+// @Success 200 {object} map[string]interface{} "Table data"
+// @Failure 400 {object} map[string]string "Invalid ID!"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 404 {object} map[string]string "Table not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+func GetTableById(client db.IMongoClient) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id := c.Param("id")
+		if id == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid ID!",
+			})
+			return
+		}
+
+		docID, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid ID!",
+			})
+			return
+		}
+
+		// Get collection from db
+		collection := client.GetCollection(config.Env.DatabaseName, "tables")
+
+		// Get context from the request
+		ctx := c.Request.Context()
+
+		// Delete user from database
+		result := collection.FindOne(ctx, bson.D{{Key: "_id", Value: docID}})
+
+		var table Table
+		err = result.Decode(&table)
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Table not found"})
+				return
+			}
+			utils.HandleMongoError(c, err)
+			return
+		}
+
+		// Return the user in the response
+		c.JSON(http.StatusOK, gin.H{
+			"data": table,
 		})
 	}
 }
