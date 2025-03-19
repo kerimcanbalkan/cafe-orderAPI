@@ -122,6 +122,7 @@ func GetTables(client db.IMongoClient) gin.HandlerFunc {
 // @Failure 401 {object} map[string]string "Unauthorized"
 // @Failure 404 {object} map[string]string "Table not found"
 // @Failure 500 {object} map[string]string "Internal server error"
+// @Router /table/{id} [get]
 func GetTableById(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
@@ -164,5 +165,59 @@ func GetTableById(client db.IMongoClient) gin.HandlerFunc {
 		c.JSON(http.StatusOK, gin.H{
 			"data": table,
 		})
+	}
+}
+
+// DeleteTable deletes a table by their ID
+//
+// @Summary Delete a table
+// @Description Allows admin role to delete a table by their ID
+// @Tags table
+// @Param id path string true "Table ID"
+// @Security bearerToken
+// @Success 200 {object} nil "Table deleted successfully"
+// @Failure 400  "Invalid ID"
+// @Failure 404  "Table not found"
+// @Failure 500  "Internal Server Error"
+// @Router /table/{id} [delete]
+func DeleteTable(client db.IMongoClient) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id := c.Param("id")
+		if id == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid ID!",
+			})
+			return
+		}
+
+		docID, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid ID!",
+			})
+			return
+		}
+
+		// Get collection from db
+		collection := client.GetCollection(config.Env.DatabaseName, "tables")
+
+		// Get context from the request
+		ctx := c.Request.Context()
+
+		// Delete user from database
+		result := collection.FindOneAndDelete(ctx, bson.D{{Key: "_id", Value: docID}})
+
+		var deletedTable Table
+		err = result.Decode(&deletedTable)
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Table not found"})
+				return
+			}
+			utils.HandleMongoError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, nil)
 	}
 }
