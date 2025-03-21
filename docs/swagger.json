@@ -481,6 +481,169 @@
                 }
             }
         },
+        "/table": {
+            "get": {
+                "description": "Fetches the tables from the database",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "table"
+                ],
+                "summary": "Get all tables",
+                "responses": {
+                    "200": {
+                        "description": "List of tables",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/table.Table"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            },
+            "post": {
+                "description": "Creates a new table with a name and assigns a uniqueCode name to it",
+                "tags": [
+                    "table"
+                ],
+                "summary": "Create a new table",
+                "parameters": [
+                    {
+                        "description": "Table object to create",
+                        "name": "table",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/table.Table"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Table created successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/table/{id}": {
+            "get": {
+                "description": "Allows users to get table data by the ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "table"
+                ],
+                "summary": "Get table data for a given ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Table ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Table data",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID!",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Table not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "bearerToken": []
+                    }
+                ],
+                "description": "Allows admin role to delete a table by their ID",
+                "tags": [
+                    "table"
+                ],
+                "summary": "Delete a table",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Table ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Table deleted successfully"
+                    },
+                    "400": {
+                        "description": "Invalid ID"
+                    },
+                    "404": {
+                        "description": "Table not found"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
         "/user": {
             "get": {
                 "security": [
@@ -801,17 +964,31 @@
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/menu.MenuItem"
+                        "$ref": "#/definitions/order.OrderItem"
                     }
                 },
                 "servedAt": {
                     "type": "string"
                 },
-                "tableNumber": {
-                    "type": "integer"
+                "tableId": {
+                    "type": "string"
                 },
                 "totalPrice": {
                     "type": "number"
+                }
+            }
+        },
+        "order.OrderItem": {
+            "type": "object",
+            "required": [
+                "quantity"
+            ],
+            "properties": {
+                "menuItem": {
+                    "$ref": "#/definitions/menu.MenuItem"
+                },
+                "quantity": {
+                    "type": "integer"
                 }
             }
         },
@@ -824,8 +1001,25 @@
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/menu.MenuItem"
+                        "$ref": "#/definitions/order.OrderItem"
                     }
+                }
+            }
+        },
+        "table.Table": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },

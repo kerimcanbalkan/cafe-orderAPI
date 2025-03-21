@@ -41,25 +41,45 @@ definitions:
         type: string
       items:
         items:
-          $ref: '#/definitions/menu.MenuItem'
+          $ref: '#/definitions/order.OrderItem'
         type: array
       servedAt:
         type: string
-      tableNumber:
-        type: integer
+      tableId:
+        type: string
       totalPrice:
         type: number
     required:
     - items
     type: object
+  order.OrderItem:
+    properties:
+      menuItem:
+        $ref: '#/definitions/menu.MenuItem'
+      quantity:
+        type: integer
+    required:
+    - quantity
+    type: object
   order.orderRequest:
     properties:
       items:
         items:
-          $ref: '#/definitions/menu.MenuItem'
+          $ref: '#/definitions/order.OrderItem'
         type: array
     required:
     - items
+    type: object
+  table.Table:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    required:
+    - name
     type: object
   user.LoginBody:
     properties:
@@ -386,6 +406,114 @@ paths:
       summary: Get statistics for a given date range.
       tags:
       - Statistics
+  /table:
+    get:
+      description: Fetches the tables from the database
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of tables
+          schema:
+            items:
+              $ref: '#/definitions/table.Table'
+            type: array
+        "500":
+          description: Internal Server Error
+      summary: Get all tables
+      tags:
+      - table
+    post:
+      description: Creates a new table with a name and assigns a uniqueCode name to
+        it
+      parameters:
+      - description: Table object to create
+        in: body
+        name: table
+        required: true
+        schema:
+          $ref: '#/definitions/table.Table'
+      responses:
+        "200":
+          description: Table created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+        "500":
+          description: Internal Server Error
+      summary: Create a new table
+      tags:
+      - table
+  /table/{id}:
+    delete:
+      description: Allows admin role to delete a table by their ID
+      parameters:
+      - description: Table ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Table deleted successfully
+        "400":
+          description: Invalid ID
+        "404":
+          description: Table not found
+        "500":
+          description: Internal Server Error
+      security:
+      - bearerToken: []
+      summary: Delete a table
+      tags:
+      - table
+    get:
+      consumes:
+      - application/json
+      description: Allows users to get table data by the ID
+      parameters:
+      - description: Table ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Table data
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID!
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Table not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get table data for a given ID
+      tags:
+      - table
   /user:
     get:
       description: Allows admin role to retrieve a list of all users

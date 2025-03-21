@@ -22,7 +22,7 @@ var validate = validator.New()
 // @Summary Create a new table
 // @Description Creates a new table with a name and assigns a uniqueCode name to it
 // @Tags table
-// @Param table body Table
+// @Param table body Table true "Table object to create"
 // @Success 200 {object} map[string]interface{} "Table created successfully"
 // @Failure 400  "Invalid request"
 // @Failure 500  "Internal Server Error"
