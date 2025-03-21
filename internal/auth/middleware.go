@@ -2,7 +2,9 @@ package auth
 
 import (
 	"net/http"
+	"slices"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -42,7 +44,23 @@ func Authenticate(allowedRoles []string) gin.HandlerFunc {
 			},
 		)
 		if err != nil || !token.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			c.Abort()
+			return
+		}
+
+		
+		// **Manually check expiration (exp)**
+		exp, ok := claims["ExpiresAt"].(float64)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token expiration missing"})
+			c.Abort()
+			return
+		}
+
+		// Convert to Unix timestamp and check if expired
+		if int64(exp) < time.Now().Unix() {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token has expired"})
 			c.Abort()
 			return
 		}
@@ -55,16 +73,9 @@ func Authenticate(allowedRoles []string) gin.HandlerFunc {
 			return
 		}
 
-		// Check if the user's role is in the allowed roles
-		roleIsValid := false
-		for _, allowedRole := range allowedRoles {
-			if role == allowedRole {
-				roleIsValid = true
-				break
-			}
-		}
 
-		if !roleIsValid {
+		// Check if the user's role is in the allowed roles
+		if !slices.Contains(allowedRoles, role) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
 			c.Abort()
 			return
