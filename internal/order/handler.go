@@ -2,6 +2,7 @@ package order
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -169,7 +170,7 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 		// Get query parameters
 		isClosed := c.Query("is_closed")
 		served := c.Query("served")
-		table := c.Query("tableID")
+		table := c.Query("table")
 		date := c.Query("date")
 
 		// Build MongoDB query dynamically
@@ -204,13 +205,15 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 		// Add table filter
 		if table != "" {
 			tableID, err := primitive.ObjectIDFromHex(table)
+			log.Println("Parsed table ID from query:", tableID.Hex())
+
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
 					"error": "Invalid Table ID",
 				})
 				return
 			}
-			query = append(query, bson.E{Key: "table", Value: tableID})
+			query = append(query, bson.E{Key: "table_id", Value: tableID})
 		}
 
 		// Parse "date" query parameter
