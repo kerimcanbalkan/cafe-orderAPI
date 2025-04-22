@@ -31,8 +31,8 @@ func getWaiterStats(
 	userID primitive.ObjectID,
 ) (WaiterStats, error) {
 	matchFilter := bson.M{
-		"createdAt": bson.M{"$gte": startDate, "$lt": endDate},
-		"handledBy": userID,
+		"served_at": bson.M{"$gte": startDate, "$lt": endDate},
+		"handled_by": userID,
 	}
 
 	pipeline := mongo.Pipeline{
@@ -43,8 +43,8 @@ func getWaiterStats(
 			{Key: "$addFields", Value: bson.M{
 				"servingTime": bson.M{
 					"$subtract": []interface{}{
-						"$servedAt",
-						"$createdAt",
+						"$served_at",
+						"$created_at",
 					}, // Get the difference between servedAt and createdAt
 				},
 			}},
@@ -93,8 +93,8 @@ func getCashierStats(
 	userID primitive.ObjectID,
 ) (CashierStats, error) {
 	matchFilter := bson.M{
-		"createdAt": bson.M{"$gte": startDate, "$lt": endDate},
-		"closedBy":  userID,
+		"closed_at": bson.M{"$gte": startDate, "$lt": endDate},
+		"closed_by":  userID,
 	}
 	pipeline := mongo.Pipeline{
 		{
@@ -105,7 +105,7 @@ func getCashierStats(
 				"_id":                 nil,               // No grouping key, aggregate over all documents
 				"total_orders_closed": bson.M{"$sum": 1}, // Count total orders closed
 				"total_revenue": bson.M{
-					"$sum": "$totalPrice",
+					"$sum": "$total_price",
 				}, // Sum of the `totalPrice` field for total revenue
 			}},
 		},

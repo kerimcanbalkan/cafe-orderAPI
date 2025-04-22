@@ -252,7 +252,7 @@ func Login(client db.IMongoClient) gin.HandlerFunc {
 		}
 		// Return the token in a JSON response
 		c.JSON(http.StatusOK, gin.H{
-			"token":      token,
+			"token":     token,
 			"expiresIn": 10 * 60 * 60, // 10 hours
 		})
 	}
@@ -511,6 +511,13 @@ func GetStatistics(client db.IMongoClient) gin.HandlerFunc {
 		now := time.Now()
 		fromStr := c.DefaultQuery("from", now.Format("2006-01-02"))
 		toStr := c.DefaultQuery("to", now.Format("2006-01-02"))
+
+		if fromStr == "" || toStr == "" {
+			c.JSON(
+				http.StatusBadRequest,
+				gin.H{"error": "Please provide valid time period"},
+			)
+		}
 
 		from, err := time.Parse("2006-01-02", fromStr)
 		if err != nil {
