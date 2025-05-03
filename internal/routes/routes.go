@@ -42,8 +42,10 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 	orderGroup := r.Group("/api/v1/order")
 	{
 		orderGroup.POST("/:tableID", order.CreateOrder(client))
+		orderGroup.GET("/active/:tableID", order.GetActiveOrdersByTableID(client))
 		orderGroup.GET(
 			"",
+			auth.Authenticate([]string{"admin", "cashier", "waiter"}),
 			order.GetOrders(client),
 		)
 		orderGroup.PATCH(

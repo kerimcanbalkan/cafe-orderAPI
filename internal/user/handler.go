@@ -327,7 +327,7 @@ func DeleteUser(client db.IMongoClient) gin.HandlerFunc {
 // @Failure 500 {object} map[string]string "Internal server error"
 func GetUserById(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id := c.Param("id")
+ 		id := c.Param("id")
 		if id == "" {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "Invalid ID!",
@@ -356,7 +356,7 @@ func GetUserById(client db.IMongoClient) gin.HandlerFunc {
 		// Get context from the request
 		ctx := c.Request.Context()
 
-		// Delete user from database
+		// Get user from database
 		result := collection.FindOne(ctx, bson.D{{Key: "_id", Value: docID}})
 
 		var user userResponse
