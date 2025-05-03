@@ -49,7 +49,6 @@ func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 			return
 		}
 
-		
 		tableID, err := primitive.ObjectIDFromHex(table)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -59,7 +58,7 @@ func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 		}
 
 		ok, err := checkTable(tableID, c, client)
-                if err != nil {
+		if err != nil {
 			utils.HandleMongoError(c, err)
 			return
 		}
@@ -70,7 +69,7 @@ func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 			})
 			return
 		}
-		
+
 		var request orderRequest
 
 		// Bind the request body to the order struct
@@ -114,7 +113,7 @@ func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 		order := &Order{}
 
 		order.Items = request.Items
-		order.TableID = tableID;
+		order.TableID = tableID
 		order.ClosedAt = nil
 		order.CreatedAt = time.Now()
 		order.ServedAt = nil
@@ -580,6 +579,73 @@ func GetStatistics(client db.IMongoClient) gin.HandlerFunc {
 		// Return the stats in the response
 		c.JSON(http.StatusOK, gin.H{
 			"data": stats,
+		})
+	}
+}
+
+// GetActiveOrdersByTableID gets active orders for a specific table
+//
+// @Summary Get table specific active orders
+// @Description Retrieves all active (not signed as closed) orders for a table
+// @Tags order
+// @Param tableID path string true "Table ID"
+// @Success 200 {array} Order "List of orders with their IDs"
+// @Failure 500 "Internal Server Error"
+// @Router /order/:tableID [get]
+func GetActiveOrdersByTableID(client db.IMongoClient) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var orders []Order
+
+		id := c.Param("tableID")
+		if id == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid ID!",
+			})
+			return
+		}
+
+		docID, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid ID!",
+			})
+			return
+		}
+
+		// Get the collection from the database
+		collection := client.GetCollection(config.Env.DatabaseName, "orders")
+
+		// Get context from the request
+		ctx := c.Request.Context()
+
+		// Build the query
+		query := bson.D{}
+
+		// Check for closed_at status
+		query = append(query, bson.E{Key: "closed_at", Value: bson.M{"$exists": false}})
+
+		// Match the table ID
+		query = append(query, bson.E{Key: "table_id", Value: docID})
+
+		// Find all documents in the menu collection
+		cursor, err := collection.Find(ctx, query)
+		if err != nil {
+			utils.HandleMongoError(c, err)
+			return
+		}
+		defer cursor.Close(ctx)
+
+		// Decode the results into the menu slice
+		if err := cursor.All(ctx, &orders); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to parse database response.",
+			})
+			return
+		}
+
+		// Return the orders in the response
+		c.JSON(http.StatusOK, gin.H{
+			"data": orders,
 		})
 	}
 }
