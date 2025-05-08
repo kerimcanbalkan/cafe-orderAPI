@@ -74,7 +74,7 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 	tableGroup := r.Group("/api/v1/table")
 	{
 		tableGroup.POST("", auth.Authenticate([]string{"admin"}), table.CreateTable(client))
-		tableGroup.GET("", auth.Authenticate([]string{"admin"}), table.GetTables(client))
+		tableGroup.GET("", auth.Authenticate([]string{"admin","waiter", "cashier"}), table.GetTables(client))
 		tableGroup.GET("/:id", table.GetTableById(client))
 		tableGroup.DELETE("/:id", auth.Authenticate([]string{"admin"}), table.DeleteTable(client))
 	}
