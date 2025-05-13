@@ -17,15 +17,9 @@ import (
 
 // SetupRoutes initializes and registers all API routes and middleware for the Gin engine.
 func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
-	// Middleware to add headers globally
-	r.Use(func(c *gin.Context) {
-		c.Header("Content-Type", "application/json")
-		c.Header("Cache-Control", "public, max-age=3600")
-		c.Header("X-Content-Type-Options", "nosniff")
-		c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-		c.Header("Access-Control-Allow-Origin", "*") // Change "*" to specific origin in production
-	})
-
+	
+	r.Use(CORSMiddleware())
+	
 	// Documentation
 	r.GET("api/v1//swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -104,4 +98,21 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 	}
 
 	r.GET("/api/v1/events", auth.Authenticate([]string{"admin,cashier,waiter"}), sse.SseHandler)
+}
+
+func CORSMiddleware() gin.HandlerFunc {
+    return func(c *gin.Context) {
+
+        c.Header("Access-Control-Allow-Origin", "*")
+        c.Header("Access-Control-Allow-Credentials", "true")
+        c.Header("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+        c.Header("Access-Control-Allow-Methods", "POST,HEAD,PATCH, OPTIONS, GET, PUT")
+
+        if c.Request.Method == "OPTIONS" {
+            c.AbortWithStatus(204)
+            return
+        }
+
+        c.Next()
+    }
 }
