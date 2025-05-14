@@ -649,3 +649,19 @@ func GetActiveOrdersByTableID(client db.IMongoClient) gin.HandlerFunc {
 		})
 	}
 }
+
+func GetYearlyStatistics(client db.IMongoClient) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		collection := client.GetCollection(config.Env.DatabaseName, "orders")
+		stats, err := getYearlyStats(c, collection)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch statistics"})
+			return
+		}
+
+		// Return the stats in the response
+		c.JSON(http.StatusOK, gin.H{
+			"data": stats,
+		})
+	}
+}
