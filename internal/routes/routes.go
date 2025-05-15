@@ -62,12 +62,6 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 			auth.Authenticate([]string{"admin"}),
 			order.GetStatistics(client),
 		)
-		orderGroup.GET(
-			"/statsMonthly",
-			auth.Authenticate([]string{"admin"}),
-			order.GetStatisticsMonthly(client),
-		)
-
 	}
 
 	tableGroup := r.Group("/api/v1/table")

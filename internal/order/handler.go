@@ -536,8 +536,9 @@ func UpdateOrder(client db.IMongoClient) gin.HandlerFunc {
 // @Security bearerToken
 // @Accept json
 // @Produce json
-// @Param from query string false "The date for which to fetch the statistics (format: yyyy-mm-dd). Defaults to today's date if not provided."
-// @Param to query string false "The date for which to fetch the statistics (format: yyyy-mm-dd). Defaults to today's date if not provided."
+// @Param from query string false "The date for which to fetch the statistics (format: yyyy-mm-dd).
+// @Param to query string false "The date for which to fetch the statistics (format: yyyy-mm-dd).
+// @Param group_by query string false "Grouping interval: one of 'day', 'week', or 'month'"
 // @Success 200 {object} map[string]interface{} "Order statistics data"
 // @Failure 400 {object} map[string]string "Invalid date format"
 // @Failure 500 {object} map[string]string "Failed to fetch statistics"
@@ -545,10 +546,19 @@ func UpdateOrder(client db.IMongoClient) gin.HandlerFunc {
 func GetStatistics(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		collection := client.GetCollection(config.Env.DatabaseName, "orders")
-		// Get date range from query params, defaulting to the current day
-		now := time.Now()
-		fromStr := c.DefaultQuery("from", now.Format("2006-01-02"))
-		toStr := c.DefaultQuery("to", now.Format("2006-01-02"))
+		// Get date range from query params
+		
+		fromStr := c.Query("from")
+		toStr := c.Query("to")
+		groupBy := c.Query("group_by")
+
+		if groupBy != "day" && groupBy != "week" && groupBy != "month" {
+			c.JSON(
+				http.StatusBadRequest,
+				gin.H{"error": "Invalid 'group_by' parameter. Allowed values are 'day', 'week', or 'month'."},
+			)
+			return
+		}
 
 		from, err := time.Parse("2006-01-02", fromStr)
 		if err != nil {
@@ -565,12 +575,7 @@ func GetStatistics(client db.IMongoClient) gin.HandlerFunc {
 			return
 		}
 
-		// Ensure 'to' date includes the full day (23:59:59)
-		to = to.Add(
-			23*time.Hour + 59*time.Minute + 59*time.Second,
-		) // Set the start date to January 1st of the given year
-
-		stats, err := getStats(from, to, c, collection)
+		stats, err := getStats(c, collection, from, to, groupBy)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch statistics"})
 			return
@@ -646,40 +651,6 @@ func GetActiveOrdersByTableID(client db.IMongoClient) gin.HandlerFunc {
 		// Return the orders in the response
 		c.JSON(http.StatusOK, gin.H{
 			"data": orders,
-		})
-	}
-}
-
-func GetStatisticsMonthly(client db.IMongoClient) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		fromStr := c.Query("from")
-		toStr := c.Query("to")
-
-		from, err := time.Parse("2006-01-02", fromStr)
-		if err != nil {
-			c.JSON(
-				http.StatusBadRequest,
-				gin.H{"error": "Invalid 'from' date format use YYYY-MM-DD"},
-			)
-			return
-		}
-
-		to, err := time.Parse("2006-01-02", toStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid 'to' date format YYYY-MM-DD"})
-			return
-		}
-
-		collection := client.GetCollection(config.Env.DatabaseName, "orders")
-		stats, err := getYearlyStats(c, collection, from, to)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch statistics"})
-			return
-		}
-
-		// Return the stats in the response
-		c.JSON(http.StatusOK, gin.H{
-			"data": stats,
 		})
 	}
 }
