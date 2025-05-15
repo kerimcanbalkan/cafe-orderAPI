@@ -51,3 +51,25 @@ func checkTable(tableID primitive.ObjectID, c *gin.Context, client db.IMongoClie
 
 	return true, nil
 }
+
+func fillMissingMonths(monthly []MonthStat) []MonthStat {
+	monthMap := make(map[int]MonthStat)
+	for _, m := range monthly {
+		monthMap[m.Month] = m
+	}
+
+	result := make([]MonthStat, 12)
+	for i := 1; i <= 12; i++ {
+		if stat, ok := monthMap[i]; ok {
+			result[i-1] = stat
+		} else {
+			result[i-1] = MonthStat{
+				Month:             i,
+				TotalOrders:       0,
+				TotalRevenue:      0,
+				AverageOrderValue: 0,
+			}
+		}
+	}
+	return result
+}

@@ -650,10 +650,28 @@ func GetActiveOrdersByTableID(client db.IMongoClient) gin.HandlerFunc {
 	}
 }
 
-func GetYearlyStatistics(client db.IMongoClient) gin.HandlerFunc {
+func GetStatisticsMonthly(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		fromStr := c.Query("from")
+		toStr := c.Query("to")
+
+		from, err := time.Parse("2006-01-02", fromStr)
+		if err != nil {
+			c.JSON(
+				http.StatusBadRequest,
+				gin.H{"error": "Invalid 'from' date format use YYYY-MM-DD"},
+			)
+			return
+		}
+
+		to, err := time.Parse("2006-01-02", toStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid 'to' date format YYYY-MM-DD"})
+			return
+		}
+
 		collection := client.GetCollection(config.Env.DatabaseName, "orders")
-		stats, err := getYearlyStats(c, collection)
+		stats, err := getYearlyStats(c, collection, from, to)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch statistics"})
 			return

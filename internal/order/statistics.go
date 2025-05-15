@@ -56,28 +56,26 @@ func getStats(
 }
 
 // Yearly stats
-type MonthlyStat struct {
+type MonthStat struct {
 	Month             int     `bson:"month"`
 	TotalOrders       int     `bson:"total_orders"`
 	TotalRevenue      float64 `bson:"total_revenue"`
 	AverageOrderValue float64 `bson:"average_order_value"`
 }
 
-type YearlyStats struct {
+type StatByMonth struct {
 	Total   OrderStats   `bson:"total"`
-	Monthly []MonthlyStat `bson:"monthly"`
+	Monthly []MonthStat `bson:"monthly"`
 }
 
 func getYearlyStats(
 	ctx context.Context,
 	collection *mongo.Collection,
-) (YearlyStats, error) {
-	now := time.Now()
-	yearStart := time.Date(now.Year(), time.January, 1, 0, 0, 0, 0, now.Location())
-	nextYearStart := time.Date(now.Year()+1, time.January, 1, 0, 0, 0, 0, now.Location())
-
+	from time.Time,
+	to time.Time,
+) (StatByMonth, error) {
 	matchFilter := bson.M{
-		"created_at": bson.M{"$gte": yearStart, "$lt": nextYearStart},
+		"created_at": bson.M{"$gte": from, "$lt": to},
 		"closed_at":  bson.M{"$exists": true},
 	}
 
@@ -123,23 +121,25 @@ func getYearlyStats(
 
 	cursor, err := collection.Aggregate(ctx, pipeline)
 	if err != nil {
-		return YearlyStats{}, err
+		return StatByMonth{}, err
 	}
 	defer cursor.Close(ctx)
 
 	var results []struct {
 		Total   []OrderStats   `bson:"total"`
-		Monthly []MonthlyStat `bson:"monthly"`
+		Monthly []MonthStat `bson:"monthly"`
 	}
 	if err := cursor.All(ctx, &results); err != nil || len(results) == 0 {
-		return YearlyStats{}, err
+		return StatByMonth{}, err
 	}
 
-	stats := YearlyStats{}
+	stats := StatByMonth{}
 	if len(results[0].Total) > 0 {
 		stats.Total = results[0].Total[0]
 	}
 	stats.Monthly = results[0].Monthly
+	stats.Monthly = fillMissingMonths(results[0].Monthly)
 
 	return stats, nil
 }
+
