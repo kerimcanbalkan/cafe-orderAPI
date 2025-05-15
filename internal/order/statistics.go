@@ -57,15 +57,15 @@ func getStats(
 
 // Yearly stats
 type MonthStat struct {
-	Month             int     `bson:"month"`
-	TotalOrders       int     `bson:"total_orders"`
-	TotalRevenue      float64 `bson:"total_revenue"`
-	AverageOrderValue float64 `bson:"average_order_value"`
+	Month             int     `bson:"month" json:"month"`
+	TotalOrders       int     `bson:"total_orders" json:"totalOrders"`
+	TotalRevenue      float64 `bson:"total_revenue" json:"totalRevenue"`
+	AverageOrderValue float64 `bson:"average_order_value" json:"averageOrderValue"`
 }
 
 type StatByMonth struct {
-	Total   OrderStats   `bson:"total"`
-	Monthly []MonthStat `bson:"monthly"`
+	Total   OrderStats   `bson:"total" json:"total"`
+	Monthly []MonthStat `bson:"monthly" json:"monthly"`
 }
 
 func getYearlyStats(
@@ -126,8 +126,8 @@ func getYearlyStats(
 	defer cursor.Close(ctx)
 
 	var results []struct {
-		Total   []OrderStats   `bson:"total"`
-		Monthly []MonthStat `bson:"monthly"`
+		Total   []OrderStats   `bson:"total" json:"total"`
+		Monthly []MonthStat `bson:"monthly" json:"monthly"`
 	}
 	if err := cursor.All(ctx, &results); err != nil || len(results) == 0 {
 		return StatByMonth{}, err
