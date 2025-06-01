@@ -359,17 +359,17 @@ func ServeOrder(client db.IMongoClient) gin.HandlerFunc {
 // CloseOrder marks an order as complete
 //
 // @Summary Mark an order as complete
-// @Description Allows admin and cashier roles to mark an order as complete
+// @Description Allows admin and cashier roles to marks all orders complete for a given table ID
 // @Tags order
-// @Param id path string true "Order ID"
+// @Param id path string true "Table ID"
 // @Security bearerToken
 // @Success 200 {object} map[string]interface{} "Order completed successfully"
 // @Failure 404  "Order not found"
 // @Failure 500  "Internal Server Error"
-// @Router /order/complete/{id} [patch]
+// @Router /order/close/{tableID} [patch]
 func CloseOrder(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		idParam := c.Param("id")
+		idParam := c.Param("tableID")
 		if idParam == "" {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "Invalid ID!",
@@ -409,7 +409,7 @@ func CloseOrder(client db.IMongoClient) gin.HandlerFunc {
 
 		// Filters by id and checks if its served
 		filter := bson.D{
-			{Key: "_id", Value: id},
+			{Key: "table_id", Value: id},
 			{Key: "served_at", Value: bson.M{"$exists": true}},
 		}
 
@@ -427,7 +427,7 @@ func CloseOrder(client db.IMongoClient) gin.HandlerFunc {
 		ctx := c.Request.Context()
 
 		// Updates the first document that has the specified "_id" value
-		result, err := collection.UpdateOne(ctx, filter, update)
+		result, err := collection.UpdateMany(ctx, filter, update)
 		if err != nil {
 			utils.HandleMongoError(c, err)
 			return
@@ -632,7 +632,7 @@ func GetActiveOrdersByTableID(client db.IMongoClient) gin.HandlerFunc {
 		// Match the table ID
 		query = append(query, bson.E{Key: "table_id", Value: docID})
 
-		// Find all documents in the menu collection
+		// Find all documents that fits the query
 		cursor, err := collection.Find(ctx, query)
 		if err != nil {
 			utils.HandleMongoError(c, err)
@@ -640,7 +640,7 @@ func GetActiveOrdersByTableID(client db.IMongoClient) gin.HandlerFunc {
 		}
 		defer cursor.Close(ctx)
 
-		// Decode the results into the menu slice
+		// Decode the results into the order slice
 		if err := cursor.All(ctx, &orders); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Failed to parse database response.",
@@ -648,9 +648,35 @@ func GetActiveOrdersByTableID(client db.IMongoClient) gin.HandlerFunc {
 			return
 		}
 
+		var total OrderTotal
+		total.TableID = docID
+		total.Items = []OrderItem{}
+		total.TotalPrice = 0
+
+		itemIndexMap := make(map[primitive.ObjectID]int)
+
+		for _, order := range orders {
+			for _, item := range order.Items {
+				menuItemID := item.MenuItem.ID
+				if idx, exists := itemIndexMap[menuItemID]; exists {
+					total.Items[idx].Quantity += item.Quantity
+				} else {
+					total.Items = append(total.Items, item)
+					itemIndexMap[menuItemID] = len(total.Items) - 1
+				}
+			}
+		}
+
+		// Calculate total price
+		var totalPrice float64
+		for _, item := range total.Items {
+			totalPrice += item.MenuItem.Price * float64(item.Quantity)
+		}
+		total.TotalPrice = totalPrice
+
 		// Return the orders in the response
 		c.JSON(http.StatusOK, gin.H{
-			"data": orders,
+			"data": total,
 		})
 	}
 }

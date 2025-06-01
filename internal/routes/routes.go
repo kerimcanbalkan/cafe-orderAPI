@@ -53,7 +53,7 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 			order.ServeOrder(client),
 		)
 		orderGroup.PATCH(
-			"/close/:id",
+			"/close/:tableID",
 			auth.Authenticate([]string{"admin", "cashier"}),
 			order.CloseOrder(client),
 		)

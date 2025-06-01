@@ -24,3 +24,9 @@ type Order struct {
 	ClosedAt   *time.Time         `bson:"closed_at,omitempty"  json:"closedAt"`
 	ClosedBy   primitive.ObjectID `bson:"closed_by,omitempty"  json:"closedBy"`
 }
+
+type OrderTotal struct {
+	TableID primitive.ObjectID `bson:"table_id" json:"tableId"`
+	Items []OrderItem `bson:"items" json:"items"`
+	TotalPrice float64 `bson:"total_price" json:"totalPrice"`
+}
