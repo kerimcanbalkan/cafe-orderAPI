@@ -410,7 +410,8 @@ func CloseOrder(client db.IMongoClient) gin.HandlerFunc {
 		// Filters by id and checks if its served
 		filter := bson.D{
 			{Key: "table_id", Value: id},
-			{Key: "handled_by", Value: bson.M{"$exists": true}},
+			{Key: "served_at", Value: bson.M{"$exists": true}},
+			{Key: "closed_at", Value: bson.M{"$exists": false}},
 		}
 
 		update := bson.D{
