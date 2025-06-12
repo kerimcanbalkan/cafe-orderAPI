@@ -18,7 +18,7 @@ type AggregatedStat struct {
 
 type Stats struct {
 	TotalOrders int `json:"totalOrders"`
-	TotalRevenue int `json:"totelRevenue"`
+	TotalRevenue int `json:"totalRevenue"`
 	AverageOrderValue int `json:"averageOrderValue"`
 	AggregatedStats []AggregatedStat `json:"aggregatedStats"`
 }
