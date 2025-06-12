@@ -1,6 +1,7 @@
 package user
 
 import (
+	"log"
 	"net/http"
 	"time"
 
@@ -327,7 +328,7 @@ func DeleteUser(client db.IMongoClient) gin.HandlerFunc {
 // @Failure 500 {object} map[string]string "Internal server error"
 func GetUserById(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
- 		id := c.Param("id")
+		id := c.Param("id")
 		if id == "" {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "Invalid ID!",
@@ -511,6 +512,15 @@ func GetStatistics(client db.IMongoClient) gin.HandlerFunc {
 		now := time.Now()
 		fromStr := c.DefaultQuery("from", now.Format("2006-01-02"))
 		toStr := c.DefaultQuery("to", now.Format("2006-01-02"))
+		groupBy := c.Query("group_by")
+
+		if groupBy != "day" && groupBy != "week" && groupBy != "month" {
+			c.JSON(
+				http.StatusBadRequest,
+				gin.H{"error": "Invalid 'group_by' parameter. Allowed values are 'day', 'week', or 'month'."},
+			)
+			return
+		}
 
 		if fromStr == "" || toStr == "" {
 			c.JSON(
@@ -544,13 +554,14 @@ func GetStatistics(client db.IMongoClient) gin.HandlerFunc {
 		var stats interface{}
 
 		if user.Role == "waiter" {
-			stats, err = getWaiterStats(from, to, c, collection, user.ID)
+			stats, err = getWaiterStats(from, to, c, collection, user.ID, groupBy)
 			if err != nil {
+				log.Printf(err.Error())
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch statistics"})
 				return
 			}
 		} else if user.Role == "cashier" {
-			stats, err = getCashierStats(from, to, c, collection, user.ID)
+			stats, err = getCashierStats(from, to, c, collection, user.ID, groupBy)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch statistics"})
 				return
