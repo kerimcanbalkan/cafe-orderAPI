@@ -16,13 +16,20 @@ type AggregatedStat struct {
 	AverageOrderValue float64 `bson:"average_order_value" json:"averageOrderValue"`
 }
 
+type Stats struct {
+	TotalOrders int `json:"totalOrders"`
+	TotalRevenue int `json:"totelRevenue"`
+	AverageOrderValue int `json:"averageOrderValue"`
+	AggregatedStats []AggregatedStat `json:"aggregatedStats"`
+}
+
 func getStats(
 	ctx context.Context,
 	collection *mongo.Collection,
 	from time.Time,
 	to time.Time,
 	groupBy string, // "day", "week", or "month"
-) ([]AggregatedStat, error) {
+) (Stats, error) {
 	matchFilter := bson.M{
 		"created_at": bson.M{"$gte": from, "$lt": to},
 		"closed_at":  bson.M{"$exists": true},
@@ -68,41 +75,70 @@ func getStats(
 			},
 		}
 	default:
-		return nil, fmt.Errorf("unsupported groupBy value: %s", groupBy)
+		return Stats{}, fmt.Errorf("unsupported groupBy value: %s", groupBy)
 	}
 
+	// Define the facet stage with two pipelines
 	pipeline := mongo.Pipeline{
 		{{Key: "$match", Value: matchFilter}},
 		{{
-			Key: "$group", Value: bson.M{
-				"_id":                groupID,
-				"total_orders":       bson.M{"$sum": 1},
-				"total_revenue":      bson.M{"$sum": "$total_price"},
-				"average_order_value": bson.M{"$avg": "$total_price"},
-				"created_at":          bson.M{"$first": "$created_at"}, // used for formatting
+			Key: "$facet", Value: bson.M{
+				"grouped": []bson.M{
+					{"$group": bson.M{
+						"_id":                 groupID,
+						"total_orders":        bson.M{"$sum": 1},
+						"total_revenue":       bson.M{"$sum": "$total_price"},
+						"average_order_value": bson.M{"$avg": "$total_price"},
+						"created_at":          bson.M{"$first": "$created_at"},
+					}},
+					{"$project": bson.M{
+						"group_key":           groupKeyExpr,
+						"total_orders":        1,
+						"total_revenue":       1,
+						"average_order_value": 1,
+					}},
+					{"$sort": bson.M{"group_key": 1}},
+				},
+				"overall": []bson.M{
+					{"$group": bson.M{
+						"_id":                 nil,
+						"total_orders":        bson.M{"$sum": 1},
+						"total_revenue":       bson.M{"$sum": "$total_price"},
+						"average_order_value": bson.M{"$avg": "$total_price"},
+					}},
+				},
 			},
 		}},
-		{{
-			Key: "$project", Value: bson.M{
-				"group_key":          groupKeyExpr,
-				"total_orders":       1,
-				"total_revenue":      1,
-				"average_order_value": 1,
-			},
-		}},
-		{{Key: "$sort", Value: bson.M{"group_key": 1}}},
 	}
 
 	cursor, err := collection.Aggregate(ctx, pipeline)
 	if err != nil {
-		return nil, err
+		return Stats{}, err
 	}
 	defer cursor.Close(ctx)
 
-	var results []AggregatedStat
-	if err := cursor.All(ctx, &results); err != nil {
-		return nil, err
+	var facetResult []struct {
+		Grouped []AggregatedStat `bson:"grouped"`
+		Overall []struct {
+			TotalOrders       int     `bson:"total_orders"`
+			TotalRevenue      float64 `bson:"total_revenue"`
+			AverageOrderValue float64 `bson:"average_order_value"`
+		} `bson:"overall"`
 	}
 
-	return results, nil
+	if err := cursor.All(ctx, &facetResult); err != nil {
+		return Stats{}, err
+	}
+
+	var finalStats Stats
+	if len(facetResult) > 0 {
+		if len(facetResult[0].Overall) > 0 {
+			finalStats.TotalOrders = facetResult[0].Overall[0].TotalOrders
+			finalStats.TotalRevenue = int(facetResult[0].Overall[0].TotalRevenue)
+			finalStats.AverageOrderValue = int(facetResult[0].Overall[0].AverageOrderValue)
+		}
+		finalStats.AggregatedStats = facetResult[0].Grouped
+	}
+
+	return finalStats, nil
 }
