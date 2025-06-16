@@ -3,6 +3,7 @@ package order
 import (
 	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/kerimcanbalkan/cafe-orderAPI/config"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/db"
@@ -153,6 +155,8 @@ func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 // @Param served query boolean false "Filter by served status (true/false)"
 // @Param table query int false "Filter by table number"
 // @Param date query string false "Filter by order date (YYYY-MM-DD)"
+// @Param page query int false "Page number (default is 1)"
+// @Param limit query int false "Number of items per page (default is 20)"
 // @Success 200 {array} Order "List of orders with their IDs"
 // @Failure 500 "Internal Server Error"
 // @Router /order [get]
@@ -171,9 +175,30 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 		served := c.Query("served")
 		table := c.Query("table")
 		date := c.Query("date")
+		pageStr := c.DefaultQuery("page", "1")
+		limitStr := c.DefaultQuery("limit", "20")
 
 		// Build MongoDB query dynamically
 		query := bson.D{}
+
+		page, err := strconv.Atoi(pageStr)
+		if err != nil || page <= 0 {
+			c.JSON(
+				http.StatusBadRequest,
+				gin.H{"error": "Invalid page number."},
+			)
+			return
+		}
+
+		limit, err := strconv.Atoi(limitStr)
+		if err != nil || limit <= 0 {
+			c.JSON(
+				http.StatusBadRequest,
+				gin.H{"error": "Invalid limit number."},
+			)
+			return
+		}
+
 
 		// Parse "status" query parameter (convert to boolean)
 		if isClosed != "" {
@@ -238,8 +263,15 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 			})
 		}
 
+		skip := (page - 1) * limit
+		findOptions := options.Find()
+		findOptions.SetSkip(int64(skip))
+		findOptions.SetLimit(int64(limit))
+		findOptions.SetSort(bson.D{{Key: "created_at", Value: -1}})
+
+
 		// Find all documents in the menu collection
-		cursor, err := collection.Find(ctx, query)
+		cursor, err := collection.Find(ctx, query, findOptions)
 		if err != nil {
 			utils.HandleMongoError(c, err)
 			return
@@ -254,10 +286,23 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 			return
 		}
 
+		totalCount, err := collection.CountDocuments(ctx, query)
+		if err != nil {
+			utils.HandleMongoError(c, err)
+			return
+		}
+
 		// Return the orders in the response
 		c.JSON(http.StatusOK, gin.H{
-			"data": orders,
+			"data":  orders,
+			"meta": gin.H{
+				"total":      totalCount,
+				"page":       page,
+				"limit":      limit,
+				"totalPages": int(math.Ceil(float64(totalCount) / float64(limit))),
+			},
 		})
+
 	}
 }
 
