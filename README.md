@@ -23,6 +23,11 @@ Cafe Order API is a RESTful API built using Go and the Gin framework to manage o
 - Go 1.19+
 - MongoDB
 
+For development can use mongodb docker image
+```sh
+sudo docker run -d -p 2717:27017 -v ~/mymongo:/data/db --name mymongo mongo:latest
+```
+
 ### Clone Repository
 ```sh
 git clone https://github.com/kerimcanbalkan/cafe-orderAPI.git
