@@ -86,8 +86,9 @@ func CreateMenuItem(client db.IMongoClient) gin.HandlerFunc {
 		// Parse form data
 		name := c.PostForm("name")
 		description := c.PostForm("description")
-		price := c.PostForm("price")
+		priceStr := c.PostForm("price")
 		category := c.PostForm("category")
+		currency := c.PostForm("currency")
 
 		// Handle the image upload
 		file, err := c.FormFile("image")
@@ -122,8 +123,7 @@ func CreateMenuItem(client db.IMongoClient) gin.HandlerFunc {
 		}
 
 		// Convert price to float
-		priceFloat, err := strconv.ParseFloat(price, 32)
-		priceFloat = roundFloat(priceFloat)
+		price, err := strconv.Atoi(priceStr)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid price format"})
 			return
@@ -135,8 +135,9 @@ func CreateMenuItem(client db.IMongoClient) gin.HandlerFunc {
 		item := MenuItem{
 			Name:        name,
 			Description: description,
-			Price:       float64(priceFloat),
+			Price:       int64(price),
 			Category:    category,
+			Currency:    currency,
 			Img:         img,
 		}
 
