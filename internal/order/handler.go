@@ -89,7 +89,7 @@ func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 			return
 		}
 
-		totalPrice := float64(0)
+		totalPrice := int64(0)
 
 		// Validate Items
 		for _, orderItem := range request.Items {
@@ -103,7 +103,7 @@ func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 				})
 				return
 			}
-			totalPrice += (orderItem.MenuItem.Price * float64(orderItem.Quantity))
+			totalPrice += orderItem.MenuItem.Price * int64(orderItem.Quantity)
 		}
 
 		// Validate the struct
@@ -527,7 +527,7 @@ func UpdateOrder(client db.IMongoClient) gin.HandlerFunc {
 			return
 		}
 
-		totalPrice := float64(0)
+		totalPrice := int64(0)
 
 		// Validate Items
 		for _, orderItem := range request.Items {
@@ -541,7 +541,7 @@ func UpdateOrder(client db.IMongoClient) gin.HandlerFunc {
 				})
 				return
 			}
-			totalPrice += (orderItem.MenuItem.Price * float64(orderItem.Quantity))
+			totalPrice += orderItem.MenuItem.Price * int64(orderItem.Quantity)
 		}
 
 		update := bson.D{
@@ -714,9 +714,9 @@ func GetActiveOrdersByTableID(client db.IMongoClient) gin.HandlerFunc {
 		}
 
 		// Calculate total price
-		var totalPrice float64
+		var totalPrice int64
 		for _, item := range total.Items {
-			totalPrice += item.MenuItem.Price * float64(item.Quantity)
+			totalPrice += item.MenuItem.Price * int64(item.Quantity)
 		}
 		total.TotalPrice = totalPrice
 

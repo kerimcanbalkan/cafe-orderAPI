@@ -16,7 +16,7 @@ type OrderItem struct {
 type Order struct {
 	ID         primitive.ObjectID `bson:"_id,omitempty"       json:"id"`
 	Items      []OrderItem        `bson:"items"               json:"items"       validate:"required"`
-	TotalPrice float64            `bson:"total_price"          json:"totalPrice"`
+	TotalPrice int64              `bson:"total_price"          json:"totalPrice"`
 	TableID    primitive.ObjectID `bson:"table_id"         json:"tableId"`
 	ServedAt   *time.Time         `bson:"served_at,omitempty"  json:"servedAt"`
 	CreatedAt  time.Time          `bson:"created_at"           json:"createdAt"`
@@ -26,7 +26,7 @@ type Order struct {
 }
 
 type OrderTotal struct {
-	TableID primitive.ObjectID `bson:"table_id" json:"tableId"`
-	Items []OrderItem `bson:"items" json:"items"`
-	TotalPrice float64 `bson:"total_price" json:"totalPrice"`
+	TableID    primitive.ObjectID `bson:"table_id" json:"tableId"`
+	Items      []OrderItem        `bson:"items" json:"items"`
+	TotalPrice int64              `bson:"total_price" json:"totalPrice"`
 }
