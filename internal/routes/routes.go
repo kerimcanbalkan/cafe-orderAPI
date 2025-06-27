@@ -11,17 +11,16 @@ import (
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/menu"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/order"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/sse"
-	"github.com/kerimcanbalkan/cafe-orderAPI/internal/user"
 	"github.com/kerimcanbalkan/cafe-orderAPI/internal/table"
+	"github.com/kerimcanbalkan/cafe-orderAPI/internal/user"
 )
 
 // SetupRoutes initializes and registers all API routes and middleware for the Gin engine.
 func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
-	
 	r.Use(CORSMiddleware())
-	
+
 	// Documentation
-	r.GET("api/v1//swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	r.GET("api/v1/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Menu Routes
 	menuGroup := r.Group("/api/v1/menu")
@@ -67,7 +66,11 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 	tableGroup := r.Group("/api/v1/table")
 	{
 		tableGroup.POST("", auth.Authenticate([]string{"admin"}), table.CreateTable(client))
-		tableGroup.GET("", auth.Authenticate([]string{"admin","waiter", "cashier"}), table.GetTables(client))
+		tableGroup.GET(
+			"",
+			auth.Authenticate([]string{"admin", "waiter", "cashier"}),
+			table.GetTables(client),
+		)
 		tableGroup.GET("/:id", table.GetTableById(client))
 		tableGroup.DELETE("/:id", auth.Authenticate([]string{"admin"}), table.DeleteTable(client))
 	}
@@ -96,22 +99,27 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 		userGroup.DELETE("/:id", auth.Authenticate([]string{"admin"}), user.DeleteUser(client))
 	}
 
-	r.GET("/api/v1/events", auth.Authenticate([]string{"admin,cashier,waiter"}), sse.SseHandler)
+	r.GET(
+		"/api/v1/events",
+		sse.SseHandler,
+	)
 }
 
 func CORSMiddleware() gin.HandlerFunc {
-    return func(c *gin.Context) {
+	return func(c *gin.Context) {
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Credentials", "true")
+		c.Header(
+			"Access-Control-Allow-Headers",
+			"Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With",
+		)
+		c.Header("Access-Control-Allow-Methods", "POST,HEAD,PATCH, OPTIONS, GET, PUT")
 
-        c.Header("Access-Control-Allow-Origin", "*")
-        c.Header("Access-Control-Allow-Credentials", "true")
-        c.Header("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
-        c.Header("Access-Control-Allow-Methods", "POST,HEAD,PATCH, OPTIONS, GET, PUT")
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
 
-        if c.Request.Method == "OPTIONS" {
-            c.AbortWithStatus(204)
-            return
-        }
-
-        c.Next()
-    }
+		c.Next()
+	}
 }
