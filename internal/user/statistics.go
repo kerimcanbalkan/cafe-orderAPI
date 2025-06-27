@@ -2,8 +2,8 @@ package user
 
 import (
 	"context"
-	"time"
 	"fmt"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -11,14 +11,14 @@ import (
 )
 
 type AggregatedWaiterStats struct {
-	GroupKey           string  `bson:"group_key" json:"groupKey"`                      // day, week or year
-	TotalOrdersServed  int     `bson:"total_orders_served" json:"totalOrdersServed"`   // minutes
+	GroupKey           string  `bson:"group_key"            json:"groupKey"`           // day, week or year
+	TotalOrdersServed  int     `bson:"total_orders_served"  json:"totalOrdersServed"`  // minutes
 	AverageServingTime float64 `bson:"average_serving_time" json:"averageServingTime"` // minutes
-	FastestServingTime float64     `bson:"fastest_serving_time" json:"fastestServingTime"` // minutesn
+	FastestServingTime float64 `bson:"fastest_serving_time" json:"fastestServingTime"` // minutes
 }
 
 type AggregatedCashierStats struct {
-	GroupKey          string  `bson:"group_key" json:"groupKey"` // day, week or year
+	GroupKey          string  `bson:"group_key"           json:"groupKey"` // day, week or year
 	TotalOrdersClosed int     `bson:"total_orders_closed" json:"totalOrdersClosed"`
 	TotalRevenue      float64 `bson:"total_revenue"       json:"totalRevenue"`
 }
@@ -26,14 +26,14 @@ type AggregatedCashierStats struct {
 type WaiterStats struct {
 	TotalOrdersServed  int                     `bson:"total_orders_served"  json:"totalOrdersServed"`
 	AverageServingTime float64                 `bson:"average_serving_time" json:"averageServingTime"` // minutes
-	FastestServingTime int                     `bson:"fastest_serving_time" json:"fastestServingTime"` // minutes
-	AggregatedStats    []AggregatedWaiterStats `json:"aggregatedStats"`
+	FastestServingTime float64                 `bson:"fastest_serving_time" json:"fastestServingTime"` // minutes
+	AggregatedStats    []AggregatedWaiterStats `                            json:"aggregatedStats"`
 }
 
 type CashierStats struct {
 	TotalOrdersClosed int                      `bson:"total_orders_closed" json:"totalOrdersClosed"`
 	TotalRevenue      float64                  `bson:"total_revenue"       json:"totalRevenue"`
-	AggregatedStats   []AggregatedCashierStats `json:"aggregatedStats"`
+	AggregatedStats   []AggregatedCashierStats `                           json:"aggregatedStats"`
 }
 
 // getStats calculates waiter statistics for a given date range.
@@ -46,7 +46,7 @@ func getWaiterStats(
 	groupBy string,
 ) (WaiterStats, error) {
 	matchFilter := bson.M{
-		"served_at":  bson.M{"$gte": startDate, "$lt": endDate},
+		"served_at":  bson.M{"$gte": startDate, "$lte": endDate},
 		"handled_by": userID,
 	}
 
@@ -55,10 +55,17 @@ func getWaiterStats(
 
 	switch groupBy {
 	case "day":
-		groupID = bson.M{"year": bson.M{"$year": "$created_at"}, "month": bson.M{"$month": "$created_at"}, "day": bson.M{"$dayOfMonth": "$created_at"}}
+		groupID = bson.M{
+			"year":  bson.M{"$year": "$created_at"},
+			"month": bson.M{"$month": "$created_at"},
+			"day":   bson.M{"$dayOfMonth": "$created_at"},
+		}
 		groupKeyExpr = bson.M{"$dateToString": bson.M{"format": "%Y-%m-%d", "date": "$created_at"}}
 	case "week":
-		groupID = bson.M{"year": bson.M{"$isoWeekYear": "$created_at"}, "week": bson.M{"$isoWeek": "$created_at"}}
+		groupID = bson.M{
+			"year": bson.M{"$isoWeekYear": "$created_at"},
+			"week": bson.M{"$isoWeek": "$created_at"},
+		}
 		groupKeyExpr = bson.M{
 			"$concat": []interface{}{
 				bson.M{"$toString": bson.M{"$isoWeekYear": "$created_at"}},
@@ -67,7 +74,10 @@ func getWaiterStats(
 			},
 		}
 	case "month":
-		groupID = bson.M{"year": bson.M{"$year": "$created_at"}, "month": bson.M{"$month": "$created_at"}}
+		groupID = bson.M{
+			"year":  bson.M{"$year": "$created_at"},
+			"month": bson.M{"$month": "$created_at"},
+		}
 		groupKeyExpr = bson.M{"$dateToString": bson.M{"format": "%Y-%m", "date": "$created_at"}}
 	default:
 		return WaiterStats{}, fmt.Errorf("unsupported groupBy value: %s", groupBy)
@@ -76,12 +86,22 @@ func getWaiterStats(
 	pipeline := mongo.Pipeline{
 		{{Key: "$match", Value: matchFilter}},
 		{{Key: "$addFields", Value: bson.M{
-			"servingTime": bson.M{"$subtract": []interface{}{"$served_at", "$created_at"}},
+			"servingTime": bson.M{
+				"$round": []interface{}{
+					bson.M{
+						"$divide": []interface{}{
+							bson.M{"$subtract": []interface{}{"$served_at", "$created_at"}},
+							60000,
+						},
+					},
+					2, // number of decimal places
+				},
+			},
 		}}},
 		{{Key: "$facet", Value: bson.M{
 			"overall": []bson.M{
 				{"$group": bson.M{
-					"_id": nil,
+					"_id":                  nil,
 					"total_orders_served":  bson.M{"$sum": 1},
 					"average_serving_time": bson.M{"$avg": "$servingTime"},
 					"fastest_serving_time": bson.M{"$min": "$servingTime"},
@@ -89,17 +109,17 @@ func getWaiterStats(
 			},
 			"grouped": []bson.M{
 				{"$group": bson.M{
-					"_id": groupID,
+					"_id":                  groupID,
 					"total_orders_served":  bson.M{"$sum": 1},
 					"average_serving_time": bson.M{"$avg": "$servingTime"},
 					"fastest_serving_time": bson.M{"$min": "$servingTime"},
 					"created_at":           bson.M{"$first": "$created_at"},
 				}},
 				{"$project": bson.M{
-					"group_key":           groupKeyExpr,
-					"total_orders_served": 1,
-					"average_serving_time": bson.M{"$divide": []interface{}{"$average_serving_time", 60000}}, // ms to min
-					"fastest_serving_time": bson.M{"$divide": []interface{}{"$fastest_serving_time", 60000}}, // ms to min
+					"group_key":            groupKeyExpr,
+					"total_orders_served":  1,
+					"average_serving_time": 1,
+					"fastest_serving_time": 1,
 				}},
 				{"$sort": bson.M{"group_key": 1}},
 			},
@@ -116,7 +136,7 @@ func getWaiterStats(
 		Overall []struct {
 			TotalOrdersServed  int     `bson:"total_orders_served"`
 			AverageServingTime float64 `bson:"average_serving_time"`
-			FastestServingTime int     `bson:"fastest_serving_time"`
+			FastestServingTime float64 `bson:"fastest_serving_time"`
 		} `bson:"overall"`
 		Grouped []AggregatedWaiterStats `bson:"grouped"`
 	}
@@ -128,14 +148,13 @@ func getWaiterStats(
 	var stats WaiterStats
 	if len(results[0].Overall) > 0 {
 		stats.TotalOrdersServed = results[0].Overall[0].TotalOrdersServed
-		stats.AverageServingTime = results[0].Overall[0].AverageServingTime / 60000.0
-		stats.FastestServingTime = int(float64(results[0].Overall[0].FastestServingTime) / 60000.0)
+		stats.AverageServingTime = results[0].Overall[0].AverageServingTime
+		stats.FastestServingTime = results[0].Overall[0].FastestServingTime
 	}
 	stats.AggregatedStats = results[0].Grouped
 
 	return stats, nil
 }
-
 
 // getCashierStats calculates cashier statistics for a given date range.
 // Needs orders collection NOT users collection
@@ -147,7 +166,7 @@ func getCashierStats(
 	groupBy string,
 ) (CashierStats, error) {
 	matchFilter := bson.M{
-		"closed_at": bson.M{"$gte": startDate, "$lt": endDate},
+		"closed_at": bson.M{"$gte": startDate, "$lte": endDate},
 		"closed_by": userID,
 	}
 
@@ -156,20 +175,30 @@ func getCashierStats(
 
 	switch groupBy {
 	case "day":
-		groupID = bson.M{"year": bson.M{"$year": "$closed_at"}, "month": bson.M{"$month": "$closed_at"}, "day": bson.M{"$dayOfMonth": "$closed_at"}}
-		groupKeyExpr = bson.M{"$dateToString": bson.M{"format": "%Y-%m-%d", "date": "$closed_at"}}
+		groupID = bson.M{
+			"year":  bson.M{"$year": "$created_at"},
+			"month": bson.M{"$month": "$created_at"},
+			"day":   bson.M{"$dayOfMonth": "$created_at"},
+		}
+		groupKeyExpr = bson.M{"$dateToString": bson.M{"format": "%Y-%m-%d", "date": "$created_at"}}
 	case "week":
-		groupID = bson.M{"year": bson.M{"$isoWeekYear": "$closed_at"}, "week": bson.M{"$isoWeek": "$closed_at"}}
+		groupID = bson.M{
+			"year": bson.M{"$isoWeekYear": "$created_at"},
+			"week": bson.M{"$isoWeek": "$created_at"},
+		}
 		groupKeyExpr = bson.M{
 			"$concat": []interface{}{
-				bson.M{"$toString": bson.M{"$isoWeekYear": "$closed_at"}},
+				bson.M{"$toString": bson.M{"$isoWeekYear": "$created_at"}},
 				"-W",
-				bson.M{"$toString": bson.M{"$isoWeek": "$closed_at"}},
+				bson.M{"$toString": bson.M{"$isoWeek": "$created_at"}},
 			},
 		}
 	case "month":
-		groupID = bson.M{"year": bson.M{"$year": "$closed_at"}, "month": bson.M{"$month": "$closed_at"}}
-		groupKeyExpr = bson.M{"$dateToString": bson.M{"format": "%Y-%m", "date": "$closed_at"}}
+		groupID = bson.M{
+			"year":  bson.M{"$year": "$created_at"},
+			"month": bson.M{"$month": "$created_at"},
+		}
+		groupKeyExpr = bson.M{"$dateToString": bson.M{"format": "%Y-%m", "date": "$created_at"}}
 	default:
 		return CashierStats{}, fmt.Errorf("unsupported groupBy value: %s", groupBy)
 	}
@@ -179,19 +208,20 @@ func getCashierStats(
 		{{Key: "$facet", Value: bson.M{
 			"overall": []bson.M{
 				{"$group": bson.M{
-					"_id":                nil,
+					"_id":                 nil,
 					"total_orders_closed": bson.M{"$sum": 1},
 					"total_revenue":       bson.M{"$sum": "$total_price"},
 				}},
 			},
 			"grouped": []bson.M{
 				{"$group": bson.M{
-					"_id":               groupID,
+					"_id":                 groupID,
 					"total_orders_closed": bson.M{"$sum": 1},
 					"total_revenue":       bson.M{"$sum": "$total_price"},
+					"created_at":          bson.M{"$first": "$created_at"},
 				}},
 				{"$project": bson.M{
-					"group_key":          groupKeyExpr,
+					"group_key":           groupKeyExpr,
 					"total_orders_closed": 1,
 					"total_revenue":       1,
 				}},
