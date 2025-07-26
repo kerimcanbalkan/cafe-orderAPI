@@ -93,7 +93,7 @@ func CreateOrder(client db.IMongoClient) gin.HandlerFunc {
 
 		// Validate Items
 		for _, orderItem := range request.Items {
-			if err := menu.ValidateMenu(validate, orderItem.MenuItem); err != nil {
+			if err := menu.ValidateMenuItem(validate, orderItem.MenuItem); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
 					"error": fmt.Sprintf(
 						"Validation failed for item %s: %s",
@@ -199,7 +199,6 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 			return
 		}
 
-
 		// Parse "status" query parameter (convert to boolean)
 		if isClosed != "" {
 			bool, err := strconv.ParseBool(isClosed)
@@ -269,7 +268,6 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 		findOptions.SetLimit(int64(limit))
 		findOptions.SetSort(bson.D{{Key: "created_at", Value: -1}})
 
-
 		// Find all documents in the menu collection
 		cursor, err := collection.Find(ctx, query, findOptions)
 		if err != nil {
@@ -294,7 +292,7 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 
 		// Return the orders in the response
 		c.JSON(http.StatusOK, gin.H{
-			"data":  orders,
+			"data": orders,
 			"meta": gin.H{
 				"total":      totalCount,
 				"page":       page,
@@ -302,7 +300,6 @@ func GetOrders(client db.IMongoClient) gin.HandlerFunc {
 				"totalPages": int(math.Ceil(float64(totalCount) / float64(limit))),
 			},
 		})
-
 	}
 }
 
@@ -531,7 +528,7 @@ func UpdateOrder(client db.IMongoClient) gin.HandlerFunc {
 
 		// Validate Items
 		for _, orderItem := range request.Items {
-			if err := menu.ValidateMenu(validate, orderItem.MenuItem); err != nil {
+			if err := menu.ValidateMenuItem(validate, orderItem.MenuItem); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
 					"error": fmt.Sprintf(
 						"Validation failed for item %s: %s",
@@ -593,7 +590,7 @@ func GetStatistics(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		collection := client.GetCollection(config.Env.DatabaseName, "orders")
 		// Get date range from query params
-		
+
 		fromStr := c.Query("from")
 		toStr := c.Query("to")
 		groupBy := c.Query("group_by")
@@ -601,7 +598,9 @@ func GetStatistics(client db.IMongoClient) gin.HandlerFunc {
 		if groupBy != "day" && groupBy != "week" && groupBy != "month" {
 			c.JSON(
 				http.StatusBadRequest,
-				gin.H{"error": "Invalid 'group_by' parameter. Allowed values are 'day', 'week', or 'month'."},
+				gin.H{
+					"error": "Invalid 'group_by' parameter. Allowed values are 'day', 'week', or 'month'.",
+				},
 			)
 			return
 		}

@@ -35,7 +35,7 @@ func EnsureIndexes(client IMongoClient, ctx context.Context, dbName string) {
 	menuCollection := client.GetCollection(dbName, "menu")
 
 	menuIndexModels := mongo.IndexModel{
-		Keys:    bson.D{{Key: "name", Value: 1}},
+		Keys:    bson.D{{Key: "language", Value: 1}},
 		Options: options.Index().SetUnique(true),
 	}
 
@@ -47,7 +47,7 @@ func EnsureIndexes(client IMongoClient, ctx context.Context, dbName string) {
 	tableCollection := client.GetCollection(dbName, "tables")
 
 	tableIndexModels := mongo.IndexModel{
-		Keys: bson.D{{Key: "name", Value: 1}},
+		Keys:    bson.D{{Key: "name", Value: 1}},
 		Options: options.Index().SetUnique(true),
 	}
 

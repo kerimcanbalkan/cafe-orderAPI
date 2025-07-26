@@ -31,7 +31,7 @@ func CreateTable(client db.IMongoClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var table Table
 
-		// Bind the request body to the order struct
+		// Bind the request body to the table struct
 		if err := c.ShouldBindJSON(&table); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "Invalid request body",
@@ -46,7 +46,7 @@ func CreateTable(client db.IMongoClient) gin.HandlerFunc {
 		}
 
 		table.CreatedAt = time.Now()
-		
+
 		// Get the collection
 		collection := client.GetCollection(config.Env.DatabaseName, "tables")
 
@@ -59,7 +59,6 @@ func CreateTable(client db.IMongoClient) gin.HandlerFunc {
 			utils.HandleMongoError(c, err)
 			return
 		}
-
 
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Table created successfuly",

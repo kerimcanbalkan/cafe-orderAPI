@@ -24,7 +24,7 @@ func isAllowedImageType(mimeType string) bool {
 	return exists
 }
 
-func ValidateMenu(v *validator.Validate, item MenuItem) error {
+func ValidateMenuItem(v *validator.Validate, item MenuItem) error {
 	// Perform validation
 	if err := v.Struct(item); err != nil {
 		if _, ok := err.(*validator.InvalidValidationError); ok {
@@ -110,4 +110,25 @@ func generateImageName() string {
 func roundFloat(val float64) float64 {
 	ratio := math.Pow(10, float64(2))
 	return math.Round(val*ratio) / ratio
+}
+
+func validateMenu(v *validator.Validate, menu Menu) error {
+	// Perform validation
+	if err := v.Struct(menu); err != nil {
+		if _, ok := err.(*validator.InvalidValidationError); ok {
+			fmt.Println(err)
+			return nil
+		}
+
+		validationErrors := err.(validator.ValidationErrors)
+		for _, fieldErr := range validationErrors {
+			switch fieldErr.Tag() {
+			case "required":
+				return fmt.Errorf("%s is required", fieldErr.Field())
+			case "iso4217":
+				return fmt.Errorf("please provide valid currency use ISO 4217")
+			}
+		}
+	}
+	return nil
 }
