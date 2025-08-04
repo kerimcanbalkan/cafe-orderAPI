@@ -94,6 +94,8 @@ func CreateMenu(client db.IMongoClient) gin.HandlerFunc {
 			return
 		}
 
+		menu.Items = []MenuItem{}
+
 		// Get menu collection
 		collection := client.GetCollection(config.Env.DatabaseName, "menu")
 
@@ -221,6 +223,63 @@ func GetMenu(client db.IMongoClient) gin.HandlerFunc {
 		// Return the menu in the response
 		c.JSON(http.StatusOK, gin.H{
 			"data": menus,
+		})
+	}
+}
+
+// GetMenuById retrieves Menu data for given menu ID
+// @Summary Get Menu data for given ID
+// @Description Allows all users to retrieve a menu.
+// @Tags menu
+// @Accept json
+// @Produce json
+// @Param id path string true "Menu ID"
+// @Success 200 {object} map[string]interface{} "Menu data"
+// @Failure 400 {object} map[string]string "Invalid ID!"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 404 {object} map[string]string "Menu not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+func GetMenuById(client db.IMongoClient) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id := c.Param("id")
+		if id == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid ID",
+			})
+			return
+		}
+		docID, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid ID!",
+			})
+			return
+		}
+
+		// Get collection from db
+		collection := client.GetCollection(config.Env.DatabaseName, "menu")
+
+		// Get context from the request
+		ctx := c.Request.Context()
+
+		// Get Menu data from database
+		result := collection.FindOne(ctx, bson.D{{Key: "_id", Value: docID}})
+		log.Println(result)
+
+		var menu Menu
+		err = result.Decode(&menu)
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Menu not found"})
+				return
+			}
+			utils.HandleMongoError(c, err)
+			return
+		}
+
+		// Return menu in the response
+		c.JSON(http.StatusOK, gin.H{
+			"data": menu,
 		})
 	}
 }

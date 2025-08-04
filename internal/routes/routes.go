@@ -28,6 +28,7 @@ func SetupRoutes(r *gin.Engine, client *db.MongoClient) {
 		menuGroup.GET("", menu.GetMenu(client))
 		menuGroup.POST("", auth.Authenticate([]string{"admin"}), menu.CreateMenu(client))
 		menuGroup.DELETE("/:id", auth.Authenticate([]string{"admin"}), menu.DeleteMenu(client))
+		menuGroup.GET("/:id", menu.GetMenuById(client))
 		menuGroup.POST("/:id", auth.Authenticate([]string{"admin"}), menu.CreateMenuItem(client))
 		menuGroup.GET("/images/:filename", menu.GetMenuItemImage)
 	}
